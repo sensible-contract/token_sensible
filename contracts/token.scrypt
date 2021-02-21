@@ -1,0 +1,177 @@
+import "util.scrypt";
+import "tokenProto.scrypt";
+import "txUtil.scrypt";
+import "rabinUtil.scrypt";
+
+/**
+ * A token protocol based on UTXO model
+ */
+contract Token {
+  int[3] rabinPubKeyArray;
+
+  public function unlockFromContract(
+    SigHashPreimage txPreimage,
+    int contractInputIndex,
+    bytes prevouts,
+    bytes prevScriptTx,
+    int prevScriptOutIndex
+  ) {
+    require(Tx.checkPreimage(txPreimage));
+    //require(Tx.checkPreimageOpt(txPreimage));
+
+    // check prevouts
+    require(hash256(prevouts) == Util.hashPrevouts(txPreimage));
+
+    // verify the prevScriptTx
+    bytes prevScriptTxId = prevouts[contractInputIndex * TxUtil.OUTPOINT_LEN: contractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
+    require(hash256(prevScriptTx) == prevScriptTxId);
+
+    // check the script
+    bytes lockingScript = Util.scriptCode(txPreimage);
+    int scriptLen = len(lockingScript);
+
+    bytes contractHash = TokenProto.getTokenAddress(lockingScript, scriptLen);
+
+    bytes prevScriptCode = TxUtil.readOutputScript(prevScriptTx, prevScriptOutIndex);
+
+    require(hash160(prevScriptCode) == contractHash);
+
+    // do not check the output, use the oracle to verify contract output
+  }
+
+  function checkTokenInput(
+    int nSenders,
+    bytes prevouts,
+    bytes rabinMsgArray,
+    bytes rabinPaddingArray,
+    bytes rabinSigArray
+  ): int {
+
+    int i = 0;
+    int sumInputToken = 0;
+    int msgPos = 0;
+    int paddingPos = 0;
+    require(nSenders <= 8);
+    // max support loop num input token
+    loop(8) {
+      if (i < nSenders) {
+        int pubIndex = 0;
+        // verify rabin signature
+        int msgLen = Util.fromLEUnsigned(rabinMsgArray[msgPos: msgPos + 4]);
+        bytes rabinMsg = rabinMsgArray[msgPos + RabinUtil.MSG_SIZE_LEN: msgPos + RabinUtil.MSG_SIZE_LEN + msgLen];
+        msgPos += RabinUtil.MSG_SIZE_LEN + msgLen;
+        int verifyCount = 0;
+        loop(3) {
+          int rabinPubKey = this.rabinPubKeyArray[pubIndex];
+          int arrayIndex = i * 3 + pubIndex;
+          int rabinSig = Util.fromLEUnsigned(rabinSigArray[arrayIndex * RabinUtil.RABIN_SIG_LEN: (arrayIndex + 1) * RabinUtil.RABIN_SIG_LEN]);
+          int paddingLen = Util.fromLEUnsigned(rabinPaddingArray[paddingPos: paddingPos + RabinUtil.PADDING_SIZE_LEN]);
+          bytes padding = b'';
+          if (paddingLen > 0) {
+            padding = rabinPaddingArray[paddingPos + RabinUtil.PADDING_SIZE_LEN: paddingPos + RabinUtil.PADDING_SIZE_LEN + paddingLen];
+          }
+          paddingPos += RabinUtil.PADDING_SIZE_LEN + paddingLen;
+          int h = RabinUtil.rabinHash(rabinMsg + padding);
+          if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
+            verifyCount += 1;
+          }
+        }
+        require(verifyCount >= 2);
+
+        RabinUtil.checkOutputPoint(prevouts, i, rabinMsg);
+
+        //TODO: sensible verify
+
+        bytes lockingScript = RabinUtil.getMsgLockingScript(rabinMsg);
+        int inputTokenAmount = TokenProto.getTokenAmount(lockingScript, len(lockingScript));
+
+        sumInputToken = sumInputToken + inputTokenAmount;
+      }
+      i = i + 1;
+    }
+
+    return sumInputToken;
+  }
+
+  /** 
+   * transfer token from n input to n output
+   * @function route
+   * @param txPreimage {SigHashPreimage} the input preimage
+   * @param senderPubKey {PubKey} the signature of sender
+   * @param senderSig {Sig} the signature of sender
+   * @param nSenders {int} the number of input token utxos
+   * @param prevouts {bytes} the previous outputs of tx
+   * @param rabinMsgArray {bytes} the msg array with length of nSenders
+   * @param rabinPaddingArray {bytes} the padding array with length of nSenders * 3
+   * @param rabinSigArray {bytes} the signature array with length of nSenders * 3
+   * @param nReceivers {int} the number of token receivers
+   * @param receiverArray {bytes} the receiver address array with length of nReceivers
+   * @param receiverTokenAmountArray {bytes} the receiver output token amount array with length of nReceivers
+   * @param receiverSatoshiArray {bytes} the receiver output satoshi amount array with length of nReceivers
+   * @param changeSatoshis {int} change satoshis amount 
+   * @param changeAddress {Ripemd160} change address 
+  */
+  public function route(
+    SigHashPreimage txPreimage,
+    PubKey senderPubKey,
+    Sig senderSig,
+    int nSenders,
+    bytes prevouts,
+    bytes rabinMsgArray,
+    bytes rabinPaddingArray,
+    bytes rabinSigArray,
+    int nReceivers,
+    bytes receiverArray,
+    bytes receiverTokenAmountArray,
+    bytes receiverSatoshiArray,
+    int changeSatoshis,
+    Ripemd160 changeAddress
+  ) {
+
+    require(Tx.checkPreimage(txPreimage));
+    //require(Tx.checkPreimageOpt(txPreimage));
+
+    require(hash256(prevouts) == Util.hashPrevouts(txPreimage));
+
+    require(nSenders > 0);
+
+    require(nReceivers > 0);
+
+    bytes tokenScript = Util.scriptCode(txPreimage);
+    int scriptLen = len(tokenScript);
+    bytes senderAddress = TokenProto.getTokenAddress(tokenScript, scriptLen);
+    // authorize
+    require(hash160(senderPubKey) == senderAddress);
+    require(checkSig(senderSig, senderPubKey));
+
+    int sumInputToken = this.checkTokenInput(nSenders, prevouts, rabinMsgArray, rabinPaddingArray, rabinSigArray);
+
+    // check the outputs
+    bytes outputs = b'';
+    // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
+    int i = 0;
+    int sumOutputToken = 0;
+    require(nReceivers <= 4);
+    loop(4) {
+      if (i < nReceivers) {
+        bytes address = receiverArray[i * TokenProto.TOKEN_ADDRESS_LEN: (i + 1) * TokenProto.TOKEN_ADDRESS_LEN];
+        int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[i * TokenProto.TOKEN_VALUE_LEN: (i + 1) * TokenProto.TOKEN_VALUE_LEN]);
+        sumOutputToken = sumOutputToken + tokenAmount;
+        bytes outputScript = TokenProto.getNewTokenScript(tokenScript, scriptLen, address, tokenAmount);
+        int outputSatoshi = Util.fromLEUnsigned(receiverSatoshiArray[i * 8: (i + 1) * 8]);
+        bytes output = Util.buildOutput(outputScript, outputSatoshi);
+        outputs = outputs + output;
+      }
+      i = i + 1;
+    }
+    require(sumInputToken == sumOutputToken);
+    if (changeSatoshis > 0) {
+      bytes outputScript = Util.buildPublicKeyHashScript(changeAddress);
+      bytes output = Util.buildOutput(outputScript, changeSatoshis);
+      outputs = outputs + output;
+    }
+    bytes hashOutputs = hash256(outputs);
+    require(hashOutputs == Util.hashOutputs(txPreimage));
+  }
+
+}

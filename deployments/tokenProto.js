@@ -3,8 +3,8 @@ const proto = require('./protoheader')
 const token = module.exports
 
 // token specific
-//<type specific data> = <contract hash(20 bytes)> + <token_name (10 bytes)> <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <genesis script code hash as tokenid(20 bytes)> + <proto header>
-const TOKEN_ID_LEN = 20
+//<type specific data> = <contract hash(20 bytes)> + <token_name (10 bytes)> <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <tokenid(36 bytes)> + <proto header>
+const TOKEN_ID_LEN = 36
 const TOKEN_VALUE_LEN = 8
 const TOKEN_ADDRESS_LEN = 20
 const DECIMAL_NUM_LEN = 1

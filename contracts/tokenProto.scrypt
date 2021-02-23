@@ -9,7 +9,7 @@ library TokenProto {
   // <proto header> = <type(4 bytes)> + <'oraclesv'(8 bytes)>
   //<token type specific data> = <contract hash(20 bytes)> + <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> <decimailNum(1 byte)> <address(20 bytes)> + <token value(8 bytes)> + <tokenid(20 bytes)>
   static int TOKEN_ID_LEN = 20;
-  static int TOKEN_VALUE_LEN = 8;
+  static int TOKEN_AMOUNT_LEN = 8;
   static int TOKEN_ADDRESS_LEN = 20;
   static int DECIMAL_NUM_LEN = 1;
   static int GENESIS_FLAG_LEN = 1;
@@ -21,8 +21,8 @@ library TokenProto {
 
   static int TYPE_OFFSET = TokenProto.PROTO_TYPE_LEN + TokenProto.PROTO_FLAG_LEN;
   static int TOKEN_ID_OFFSET = TokenProto.TOKEN_ID_LEN + TokenProto.TYPE_OFFSET;
-  static int TOKEN_VALUE_OFFSET = TokenProto.TOKEN_ID_OFFSET + TokenProto.TOKEN_VALUE_LEN;
-  static int TOKEN_ADDRESS_OFFSET = TokenProto.TOKEN_VALUE_OFFSET + TokenProto.TOKEN_ADDRESS_LEN;
+  static int TOKEN_AMOUNT_OFFSET = TokenProto.TOKEN_ID_OFFSET + TokenProto.TOKEN_AMOUNT_LEN;
+  static int TOKEN_ADDRESS_OFFSET = TokenProto.TOKEN_AMOUNT_OFFSET + TokenProto.TOKEN_ADDRESS_LEN;
   static int DECIMAL_NUM_OFFSET = TokenProto.TOKEN_ADDRESS_OFFSET + TokenProto.DECIMAL_NUM_LEN;
   static int GENESIS_FLAG_OFFSET = TokenProto.DECIMAL_NUM_OFFSET + TokenProto.GENESIS_FLAG_LEN;
   static int TOKEN_SYMBOL_OFFSET = TokenProto.GENESIS_FLAG_OFFSET + TokenProto.TOKEN_SYMBOL_LEN;
@@ -51,7 +51,7 @@ library TokenProto {
   }
 
   static function getTokenAmount(bytes script, int slen): int {
-    return Util.fromLEUnsigned(script[slen - TokenProto.TOKEN_VALUE_OFFSET: slen - TokenProto.TOKEN_VALUE_OFFSET + TokenProto.TOKEN_VALUE_LEN]);
+    return Util.fromLEUnsigned(script[slen - TokenProto.TOKEN_AMOUNT_OFFSET: slen - TokenProto.TOKEN_AMOUNT_OFFSET + TokenProto.TOKEN_AMOUNT_LEN]);
   }
 
   static function getNewTokenScript(bytes script, int slen, bytes address, int tokenValue): bytes {

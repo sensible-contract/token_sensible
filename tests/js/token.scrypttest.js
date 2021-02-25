@@ -74,10 +74,9 @@ const tokenValue2 = tokenValue - tokenValue1
 const buffValue = Buffer.alloc(8, 0)
 buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const tokenID = Buffer.concat([
-  Buffer.from(dummyTxId, 'hex'),
+  Buffer.from(dummyTxId, 'hex').reverse(),
   Buffer.alloc(4, 0),
 ])
-let contractHash
 let routeCheckCodeHash
 let tokenInstance = []
 let routeCheckInstance
@@ -138,15 +137,6 @@ function genRouteCheckTx(nOutputs, outputTokenArray) {
   return prevScriptTx
 }
 
-function getTokenContractHash() {
-  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash))
-  //token.replaceAsmVars(asmVars)
-  token.setDataPart(Buffer.alloc(TokenProto.getHeaderLen(), 0).toString('hex'))
-  const lockingScript = token.lockingScript.toBuffer()
-  const contractCode = TokenProto.getContractCode(lockingScript)
-  contractHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(contractCode))
-}
-
 function addInputTokens(nTokenInput, nSatoshiInput, nTokenOutputs, outputTokenAdd) {
 
   tx = new bsv.Transaction()
@@ -158,7 +148,6 @@ function addInputTokens(nTokenInput, nSatoshiInput, nTokenOutputs, outputTokenAd
     bufValue.writeBigUInt64LE(BigInt(outputToken1 + i))
     sumInputTokens += outputToken1 + i
     const oracleData = Buffer.concat([
-      contractHash,
       tokenName,
       tokenSymbol,
       nonGenesisFlag,
@@ -224,7 +213,6 @@ function addOutputTokens(nOutputToken, outputTokenArray, changeSatoshi) {
     const bufValue = Buffer.alloc(8, 0)
     bufValue.writeBigUInt64LE(BigInt(outputTokenArray[i]))
     const oracleData = Buffer.concat([
-      contractHash,
       tokenName,
       tokenSymbol,
       nonGenesisFlag,
@@ -486,7 +474,6 @@ function unlockFromContract(scriptHash=null) {
   const bufValue = Buffer.alloc(8, 0)
   bufValue.writeBigUInt64LE(BigInt(sellSatoshis * 10))
   const oracleData = Buffer.concat([
-    contractHash,
     tokenName,
     tokenSymbol,
     nonGenesisFlag,
@@ -544,7 +531,6 @@ function unlockFromContract(scriptHash=null) {
 describe('Test token contract unlock In Javascript', () => {
   before(() => {
     initRouteCheckCodeHash()
-    getTokenContractHash()
   });
 
   it('should succeed with multi input and output', () => {

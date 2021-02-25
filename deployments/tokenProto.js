@@ -3,26 +3,24 @@ const proto = require('./protoheader')
 const token = module.exports
 
 // token specific
-//<type specific data> = <contract hash(20 bytes)> + <token_name (10 bytes)> <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <tokenid(36 bytes)> + <proto header>
+//<type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <tokenid(36 bytes)> + <proto header>
 const TOKEN_ID_LEN = 36
-const TOKEN_VALUE_LEN = 8
+const TOKEN_AMOUNT_LEN = 8
 const TOKEN_ADDRESS_LEN = 20
 const DECIMAL_NUM_LEN = 1
 const GENESIS_FLAG_LEN = 1
 const TOKEN_SYMBOL_LEN = 10
 const TOKEN_NAME_LEN = 20
-const CONTRACT_HASH_LEN = 20
 
 const TOKEN_ID_OFFSET = TOKEN_ID_LEN + proto.getHeaderLen()
-const TOKEN_VALUE_OFFSET = TOKEN_ID_OFFSET + TOKEN_VALUE_LEN
-const TOKEN_ADDRESS_OFFSET = TOKEN_VALUE_OFFSET + TOKEN_ADDRESS_LEN
+const TOKEN_AMOUNT_OFFSET = TOKEN_ID_OFFSET + TOKEN_AMOUNT_LEN
+const TOKEN_ADDRESS_OFFSET = TOKEN_AMOUNT_OFFSET + TOKEN_ADDRESS_LEN
 const DECIMAL_NUM_OFFSET = TOKEN_ADDRESS_OFFSET + DECIMAL_NUM_LEN
 const GENESIS_FLAG_OFFSET = DECIMAL_NUM_OFFSET + GENESIS_FLAG_LEN
 const TOKEN_SYMBOL_OFFSET = GENESIS_FLAG_OFFSET + TOKEN_SYMBOL_LEN
 const TOKEN_NAME_OFFSET = TOKEN_SYMBOL_OFFSET + TOKEN_NAME_LEN 
-const CONTRACT_HASH_OFFSET = TOKEN_NAME_OFFSET + CONTRACT_HASH_LEN
 
-const TOKEN_HEADER_LEN = CONTRACT_HASH_OFFSET
+const TOKEN_HEADER_LEN = TOKEN_NAME_OFFSET
 
 token.GENESIS_TOKEN_ID = Buffer.alloc(TOKEN_ID_LEN, 0)
 token.EMPTY_ADDRESS = Buffer.alloc(TOKEN_ADDRESS_LEN, 0)
@@ -35,7 +33,7 @@ token.getHeaderLen = function() {
 }
 
 token.getTokenAmount = function(script) {
-  return script.readBigUInt64LE(script.length - TOKEN_VALUE_OFFSET)
+  return script.readBigUInt64LE(script.length - TOKEN_AMOUNT_OFFSET)
 }
 
 token.getTokenID = function(script) {
@@ -60,10 +58,6 @@ token.getTokenSymbol = function(script) {
 
 token.getTokenName = function(script) {
   return script.subarray(script.length - TOKEN_NAME_OFFSET, script.length - TOKEN_NAME_OFFSET + TOKEN_NAME_LEN)
-}
-
-token.getContractHash = function(script) {
-  return script.subarray(script.length - CONTRACT_HASH_OFFSET, script.length - CONTRACT_HASH_OFFSET + CONTRACT_HASH_LEN)
 }
 
 token.getContractCode = function(script) {

@@ -81,7 +81,6 @@ library RabinUtil {
   }
 
   static function checkOutputPoint(bytes prevouts, int inputIndex, bytes rabinMsg): bool {
-    //TODO:
     bytes prevTxId = prevouts[inputIndex * TxUtil.OUTPOINT_LEN: inputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
     int outputIndex = Util.fromLEUnsigned(prevouts[inputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN: (inputIndex + 1) * TxUtil.OUTPOINT_LEN]);
     require(prevTxId == RabinUtil.getMsgTxId(rabinMsg));

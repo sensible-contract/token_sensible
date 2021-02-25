@@ -1,12 +1,15 @@
 import "util.scrypt";
 import "tokenProto.scrypt";
-import "txUtil.scrypt";
 import "rabinUtil.scrypt";
 
 // opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenID
-contract TokenAmountCheck {
+contract TokenRouteCheck {
   int[3] rabinPubKeyArray;
     
+  /**
+   * @param changeSatoshis {int} change satoshis amount 
+   * @param changeAddress {Ripemd160} change address 
+  */
   public function unlock(
     SigHashPreimage txPreimage,
     int nSenders,

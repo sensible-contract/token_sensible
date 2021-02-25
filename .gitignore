@@ -1,3 +1,4 @@
 node_modules
 .vscode
 deployments/fixture
+out/

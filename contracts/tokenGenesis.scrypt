@@ -36,7 +36,7 @@ contract tokenGenesis {
     require(decimalNum == this.decimalNum);
     bytes address = TokenProto.getTokenAddress(data, dataLen);
     require(address == b'0000000000000000000000000000000000000000');
-    int tokenValue = TokenProto.getTokenValue(data, dataLen);
+    int tokenValue = TokenProto.getTokenAmount(data, dataLen);
     require(tokenValue == 0);
     bytes tokenID = TokenProto.getTokenID(data, dataLen);
     require(tokenID == b'0000000000000000000000000000000000000000');
@@ -46,7 +46,7 @@ contract tokenGenesis {
     bytes flag = TokenProto.getProtoFlag(data, dataLen);
     require(flag == TokenProto.PROTO_FLAG);
 
-    bytes genesisHash = hash160(data);
+    bytes genesisID = Util.outpoint(txPreimage);
 
     // check outputScript oracle data
     dataLen = len(outputScript);
@@ -56,8 +56,8 @@ contract tokenGenesis {
     bytes contractHash = hash160(contractCode);
     require(contractHash == this.contractHash);
 
-    bytes contractHash2 = TokenProto.getContractHash(outputScript, dataLen);
-    require(contractHash2 == this.contractHash);
+    //bytes contractHash2 = TokenProto.getContractHash(outputScript, dataLen);
+    //require(contractHash2 == this.contractHash);
     tokenName = TokenProto.getTokenName(outputScript, dataLen);
     require(tokenName == this.tokenName);
     tokenSymbol = TokenProto.getTokenSymbol(outputScript, dataLen);
@@ -67,7 +67,7 @@ contract tokenGenesis {
     decimalNum = TokenProto.getDecimalNum(outputScript, dataLen);
     require(decimalNum == this.decimalNum);
     tokenID = TokenProto.getTokenID(outputScript, dataLen);
-    require(tokenID == genesisHash);
+    require(tokenID == genesisID);
     protoType = TokenProto.getProtoType(outputScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
     // flag == 'oraclesv'

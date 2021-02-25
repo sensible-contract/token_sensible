@@ -8,7 +8,7 @@ import "rabinUtil.scrypt";
  */
 contract Token {
   int[3] rabinPubKeyArray;
-  bytes amountCheckCodeHash;
+  bytes routeCheckCodeHash;
 
   function verifyAmountCheckContract(
     bytes prevouts,
@@ -42,9 +42,20 @@ contract Token {
     require(receiverTokenAmountArray2 == receiverTokenAmountArray);
     pos += nReceivers * TokenProto.TOKEN_AMOUNT_LEN;
 
+    // code hash do not count op_return + data length + data
+    if (pos < 75) {
+      pos += 2;
+    } else if (pos < 255) {
+      pos += 3;
+    } else if (pos < 65536) {
+      pos += 4;
+    } else {
+      pos += 6;
+    }
+
     bytes contractCode = prevScriptCode[: scriptLen - pos];
 
-    return hash160(contractCode) == this.amountCheckCodeHash;
+    return hash160(contractCode) == this.routeCheckCodeHash;
   }
 
   /** 
@@ -62,17 +73,15 @@ contract Token {
    * @param receiverArray {bytes} the receiver address array with length of nReceivers
    * @param receiverTokenAmountArray {bytes} the receiver output token amount array with length of nReceivers
    * @param receiverSatoshiArray {bytes} the receiver output satoshi amount array with length of nReceivers
-   * @param changeSatoshis {int} change satoshis amount 
-   * @param changeAddress {Ripemd160} change address 
   */
   public function route(
     SigHashPreimage txPreimage,
     PubKey senderPubKey,
     Sig senderSig,
+    bytes prevouts,
     bytes rabinMsg,
     bytes[3] rabinPaddingArray,
     int[3] rabinSigArray,
-    bytes prevouts,
     int contractInputIndex,
     bytes prevScriptTx,
     int prevScriptOutIndex,
@@ -91,7 +100,6 @@ contract Token {
     int scriptLen = len(tokenScript);
     bytes senderAddress = TokenProto.getTokenAddress(tokenScript, scriptLen);
     bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
-    bytes contractCode = TokenProto.getContractCode(tokenScript, scriptLen);
 
     // authorize
     require(hash160(senderPubKey) == senderAddress);
@@ -99,11 +107,10 @@ contract Token {
 
     bytes thisOutpoint = Util.outpoint(txPreimage);
     // verify rabin signature
-    bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, contractCode);
+    bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript);
     require(res == true);
 
     res = this.verifyAmountCheckContract(prevouts, contractInputIndex, prevScriptTx, prevScriptOutIndex, tokenID, nReceivers, receiverArray, receiverTokenAmountArray);
     require(res == true);
   }
-
 }

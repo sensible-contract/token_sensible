@@ -70,15 +70,17 @@ contract TokenRouteCheck {
           if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
             verifyCount += 1;
           }
+          pubIndex += 1;
         }
         require(verifyCount >= 2);
 
-        RabinUtil.checkOutputPoint(prevouts, i + 1, rabinMsg);
+        RabinUtil.checkOutputPoint(prevouts, i, rabinMsg);
 
         bytes lockingScript = RabinUtil.getMsgLockingScript(rabinMsg);
         int lsLen = len(lockingScript);
         int inputTokenAmount = TokenProto.getTokenAmount(lockingScript, lsLen);
         require(tokenID == TokenProto.getTokenID(lockingScript, lsLen));
+        tokenScript = lockingScript;
 
         sumInputToken = sumInputToken + inputTokenAmount;
       }
@@ -91,12 +93,13 @@ contract TokenRouteCheck {
     i = 0;
     int sumOutputToken = 0;
     require(nReceivers <= 4);
+    int tokenScriptLen = len(tokenScript);
     loop(4) {
       if (i < nReceivers) {
         bytes address = receiverArray[i * TokenProto.TOKEN_ADDRESS_LEN: (i + 1) * TokenProto.TOKEN_ADDRESS_LEN];
         int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[i * TokenProto.TOKEN_AMOUNT_LEN: (i + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
         sumOutputToken = sumOutputToken + tokenAmount;
-        bytes outputScript = TokenProto.getNewTokenScript(tokenScript, scriptLen, address, tokenAmount);
+        bytes outputScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, tokenAmount);
         int outputSatoshi = Util.fromLEUnsigned(receiverSatoshiArray[i * 8: (i + 1) * 8]);
         bytes output = Util.buildOutput(outputScript, outputSatoshi);
         outputs = outputs + output;

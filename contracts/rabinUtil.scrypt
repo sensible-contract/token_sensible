@@ -2,65 +2,33 @@ import "tokenProto.scrypt";
 import "util.scrypt";
 import "txUtil.scrypt";
 
-/*struct PayloadU4Data {
-  int length;
-  int scriptCodeLen;
-
+struct PayloadU4Data {
   bytes outpoint;
   int value;
-  bytes scriptCode;
-}*/
+  bytes scriptHash;
+}
+
 struct PayloadU4SpendByData {
-  int length;
-  int scriptCodeLen;
-
   bytes outpoint;
   int value;
-  bytes scriptCode;
+  bytes scriptHash;
   Sha256 byTxId;
 }
 
 library RabinUtil {
 
+  // u4 rabin msg common format:
+  // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <contractHash(20 bytes)>
   // rabin sig length
+  static int U4_RABIN_MSG_LEN = 64;
   static int RABIN_SIG_LEN = 128;
   static int PADDING_SIZE_LEN = 2;
-  static int MSG_SIZE_LEN = 4;
-
-  // rabin msg common format:
-  // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <scriptLen(4 bytes)> + <lockingScript> + <spendByTxId(optional)>
-
-  // common part
-  static int TX_ID_LEN = 32;
-  static int OUTPUT_INDEX_LEN = 4;
-  static int OUTPUT_SATOSHI_LEN = 8;
-
-  static int TX_ID_OFFSET = 0;
-  static int OUTPUT_INDEX_OFFSET = RabinUtil.TX_ID_OFFSET + RabinUtil.TX_ID_LEN;
-  static int OUTPUT_SATOSHI_OFFSET = RabinUtil.OUTPUT_INDEX_OFFSET + RabinUtil.OUTPUT_INDEX_LEN;
-  static int LOCKING_SCRIPT_OFFSET = RabinUtil.OUTPUT_SATOSHI_OFFSET + RabinUtil.OUTPUT_SATOSHI_LEN;
 
   static function rabinHash(bytes x): int {
     // expand into 512 bit hash
     bytes hx = sha256(x);
     int idx = len(hx) / 2;
     return unpack(sha256(hx[:idx]) + sha256(hx[idx:]) + b'00');
-  }
-
-  static function getMsgTxId(bytes msg): bytes {
-    return msg[RabinUtil.TX_ID_OFFSET: RabinUtil.TX_ID_OFFSET + RabinUtil.TX_ID_LEN];
-  }
-
-  static function getMsgOutputIndex(bytes msg): int {
-    return unpack(msg[RabinUtil.OUTPUT_INDEX_OFFSET: RabinUtil.OUTPUT_INDEX_OFFSET + RabinUtil.OUTPUT_INDEX_LEN] + b'00');
-  }
-
-  static function getMsgOutputSatoshis(bytes msg): int {
-    return unpack(msg[RabinUtil.OUTPUT_SATOSHI_OFFSET: RabinUtil.OUTPUT_SATOSHI_OFFSET + RabinUtil.OUTPUT_SATOSHI_LEN] + b'00');
-  }
-
-  static function getMsgLockingScript(bytes msg): bytes {
-    return msg[RabinUtil.LOCKING_SCRIPT_OFFSET: ];
   }
 
   static function verifyMsgThree(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray): int {
@@ -80,53 +48,36 @@ library RabinUtil {
     return verifyCount;
   }
 
-  static function checkOutputPoint(bytes prevouts, int inputIndex, bytes rabinMsg): bool {
-    bytes prevTxId = prevouts[inputIndex * TxUtil.OUTPOINT_LEN: inputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
-    int outputIndex = Util.fromLEUnsigned(prevouts[inputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN: (inputIndex + 1) * TxUtil.OUTPOINT_LEN]);
-    require(prevTxId == RabinUtil.getMsgTxId(rabinMsg));
-    require(outputIndex == RabinUtil.getMsgOutputIndex(rabinMsg));
-    return true;
-  }
-
-  /*static function loadPayloadU4(bytes msg) : PayloadU4Data {
+  static function loadPayloadU4(bytes msg) : PayloadU4Data {
     PayloadU4Data self = {
-      0,
-      0,
       b'',
       0,
       b''
     };
-    self.length = len(msg);
-    self.scriptCodeLen = self.length - 32 - 4 - 8;
-
     self.outpoint = msg[ : 36];
-    self.value = unpack(msg[36 : 44]);
-    self.scriptCode = msg[44 : ];
+    self.value = unpack(msg[36 : 44] + b'00');
+    self.scriptHash = msg[44 : ];
 
     return self;
-  }*/
+  }
 
   static function loadPayloadU4SpendBy(bytes msg) : PayloadU4SpendByData {
     PayloadU4SpendByData self = {
-      0,
-      0,
       b'',
       0,
       b'',
       Sha256(b'')
     };
-    self.length = len(msg);
-    self.scriptCodeLen = self.length - 32 - 4 - 8 - 32;
 
     self.outpoint = msg[ : 36];
-    self.value = unpack(msg[36 : 44]);
-    self.scriptCode = msg[44 : self.length - 32];
-    self.byTxId = Sha256(msg[self.length - 32 : ]);
+    self.value = unpack(msg[36 : 44] + b'00');
+    self.scriptHash = msg[44 : 64];
+    self.byTxId = Sha256(msg[64 : ]);
 
     return self;
   }
 
-  static function verifyInputMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray, bytes thisOutpoint, bytes tokenID, bytes scriptCode): bool {
+  static function verifyInputMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray, bytes thisOutpoint, bytes tokenID, bytes scriptCode, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
     int verifyCount = RabinUtil.verifyMsgThree(rabinPubKeyArray, rabinMsg, paddingArray, sigArray);
     require(verifyCount > 2);
 
@@ -139,17 +90,16 @@ library RabinUtil {
     if (pl.outpoint == tokenID) {
       matchGenesis = true;
     } else {
-      int scriptLen = len(pl.scriptCode);
-      bytes address = TokenProto.getTokenAddress(pl.scriptCode, scriptLen);
-      int tokenAmount = TokenProto.getTokenAmount(pl.scriptCode, scriptLen);
-      bytes newScriptCode = TokenProto.getNewTokenScript(scriptCode, len(scriptCode), address, tokenAmount);
-      if (newScriptCode == pl.scriptCode) {
+      if (pl.scriptHash == genesisHash) {
         matchGenesis = true;
+      } else {
+        bytes newScriptCode = TokenProto.getNewTokenScript(scriptCode, len(scriptCode), tokenAddress, tokenAmount);
+        if (hash160(newScriptCode) == pl.scriptHash) {
+          matchGenesis = true;
+        }
       }
     }
 
     return matchGenesis;
   }
-
-
 }

@@ -77,7 +77,9 @@ const tokenID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
   Buffer.alloc(4, 0),
 ])
+let genesisHash
 let routeCheckCodeHash
+let unlockContractCodeHash
 let tokenInstance = []
 let routeCheckInstance
 
@@ -86,12 +88,14 @@ const maxOutputLimit = 4
 
 const decimalNum = Buffer.from('08', 'hex')
 
-function initRouteCheckCodeHash() {
+function initContractHash() {
   const routeCheckCode = new RouteCheck(rabinPubKeyArray)
   const lockingScript = routeCheckCode.lockingScript.toBuffer()
   const code = lockingScript
   routeCheckCodeHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex')
-  //console.log('initRouteCheckCodeHash:', routeCheckCodeHash, code.toString('hex'))
+  //TODO:
+  unlockContractCodeHash = routeCheckCodeHash
+  genesisHash = routeCheckCodeHash
 }
 
 function genReceiverData(nOutputs, outputTokenArray) {
@@ -159,7 +163,7 @@ function addInputTokens(nTokenInput, nSatoshiInput, nTokenOutputs, outputTokenAd
       PROTO_FLAG
       ])
 
-    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash))
+    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
     token.setDataPart(oracleData.toString('hex'))
     tokenInstance.push(token)
     const tokenScript = token.lockingScript
@@ -223,7 +227,7 @@ function addOutputTokens(nOutputToken, outputTokenArray, changeSatoshi) {
       tokenType, // type
       PROTO_FLAG
       ])
-    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash))
+    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
     //token.replaceAsmVars(asmVars)
     token.setDataPart(oracleData.toString('hex'))
     tx.addOutput(new bsv.Transaction.Output({
@@ -255,7 +259,10 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
   let rabinMsgArray = Buffer.alloc(0)
   let rabinSignArray = Buffer.alloc(0)
   let rabinPaddingArray = Buffer.alloc(0)
+  let inputTokenAddressArray = Buffer.alloc(0)
+  let inputTokenAmountArray = Buffer.alloc(0)
   let prevouts = Buffer.alloc(0)
+  let tokenScript
   for (let i = 0; i < nTokenInputs; i++) {
     const indexBuf = Buffer.alloc(4, 0)
     indexBuf.writeUInt32LE(i)
@@ -266,9 +273,17 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
       indexBuf
     ])
 
-    token = tokenInstance[i]
+    const token = tokenInstance[i]
+    tokenScript = token.lockingScript.toBuffer()
 
-    const scriptCode = token.lockingScript.toBuffer()
+    const address = TokenProto.getTokenAddress(tokenScript)
+    inputTokenAddressArray = Buffer.concat([inputTokenAddressArray, address])
+    const amount = TokenProto.getTokenAmount(tokenScript)
+    const amountBuf = Buffer.alloc(8, 0)
+    amountBuf.writeBigUInt64LE(BigInt(amount))
+    inputTokenAmountArray = Buffer.concat([inputTokenAmountArray, amountBuf])
+
+    const scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(tokenScript))
     const bufValue = Buffer.alloc(8, 0)
     bufValue.writeBigUInt64LE(BigInt(outputToken1 + i))
     const satoshiBuf = Buffer.alloc(8, 0)
@@ -277,13 +292,10 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
       txidBuf,
       indexBuf,
       satoshiBuf,
-      scriptCode,
+      scriptHash,
     ])
-    const msgLenBuf = Buffer.alloc(4, 0)
-    msgLenBuf.writeUInt32LE(rabinMsg.length)
     rabinMsgArray = Buffer.concat([
       rabinMsgArray,
-      msgLenBuf,
       rabinMsg,
     ])
     //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
@@ -328,10 +340,13 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
   const result = routeCheckInstance.unlock(
     new SigHashPreimage(toHex(preimage)),
     nTokenInputs,
+    new Bytes(tokenScript.toString('hex')),
     new Bytes(prevouts.toString('hex')),
     new Bytes(rabinMsgArray.toString('hex')),
     new Bytes(rabinPaddingArray.toString('hex')),
     new Bytes(rabinSignArray.toString('hex')),
+    new Bytes(inputTokenAddressArray.toString('hex')),
+    new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(receiverSatoshiArray.toString('hex')),
     changeSatoshi,
     new Ripemd160(address1.hashBuffer.toString('hex'))
@@ -372,6 +387,8 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
   let rabinSign
   let rabinPadding
   let prevouts = Buffer.alloc(0)
+  let prevTokenAddress
+  let prevTokenAmount
   for (let i = 0; i < nTokenInputs; i++) {
     const indexBuf = Buffer.alloc(4, 0)
     indexBuf.writeUInt32LE(i)
@@ -383,7 +400,10 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     ])
 
     if (i == inputIndex) {
-      const scriptCode = token.lockingScript.toBuffer()
+      const scriptBuf = token.lockingScript.toBuffer()
+      const scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(scriptBuf))
+      prevTokenAddress = TokenProto.getTokenAddress(scriptBuf)
+      prevTokenAmount = TokenProto.getTokenAmount(scriptBuf)
       const bufValue = Buffer.alloc(8, 0)
       bufValue.writeBigUInt64LE(BigInt(outputToken1 + i))
       const satoshiBuf = Buffer.alloc(8, 0)
@@ -392,7 +412,7 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
         txidBuf,
         indexBuf,
         satoshiBuf,
-        scriptCode,
+        scriptHash,
         txidBuf,
       ])
       const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
@@ -421,8 +441,6 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     indexBuf
   ])
 
-  const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nOutputs, outputTokenArray)
-
   let rabinPaddingArray = []
   let rabinSigArray = []
   for (let i = 0; i < 3; i++) {
@@ -442,8 +460,8 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     new Bytes(prevScriptTx.toString('hex')),
     prevScriptOutIndex,
     nOutputs,
-    new Bytes(recervierArray.toString('hex')),
-    new Bytes(receiverTokenAmountArray.toString('hex')),
+    new Bytes(prevTokenAddress.toString('hex')),
+    prevTokenAmount
   ).verify(txContext)
   if (expected === true) {
     expect(result.success, result.error).to.be.true
@@ -485,7 +503,7 @@ function unlockFromContract(scriptHash=null) {
     PROTO_FLAG
     ])
 
-  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash))
+  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
   //token.replaceAsmVars(asmVars)
   token.setDataPart(oracleData.toString('hex'))
   const tokenScript = token.lockingScript
@@ -530,7 +548,7 @@ function unlockFromContract(scriptHash=null) {
 
 describe('Test token contract unlock In Javascript', () => {
   before(() => {
-    initRouteCheckCodeHash()
+    initContractHash()
   });
 
   it('should succeed with multi input and output', () => {

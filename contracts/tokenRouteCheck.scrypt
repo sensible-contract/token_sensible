@@ -13,10 +13,13 @@ contract TokenRouteCheck {
   public function unlock(
     SigHashPreimage txPreimage,
     int nSenders,
+    bytes tokenScript,
     bytes prevouts,
     bytes rabinMsgArray,
     bytes rabinPaddingArray,
     bytes rabinSigArray,
+    bytes inputTokenAddressArray,
+    bytes inputTokenAmountArray,
     bytes receiverSatoshiArray,
     int changeSatoshis,
     Ripemd160 changeAddress
@@ -43,18 +46,14 @@ contract TokenRouteCheck {
 
     int i = 0;
     int sumInputToken = 0;
-    int msgPos = 0;
     int paddingPos = 0;
-    bytes tokenScript = b'';
     require(nSenders <= 8);
     // max support loop num input token
     loop(8) {
       if (i < nSenders) {
         int pubIndex = 0;
         // verify rabin signature
-        int msgLen = Util.fromLEUnsigned(rabinMsgArray[msgPos: msgPos + 4]);
-        bytes rabinMsg = rabinMsgArray[msgPos + RabinUtil.MSG_SIZE_LEN: msgPos + RabinUtil.MSG_SIZE_LEN + msgLen];
-        msgPos += RabinUtil.MSG_SIZE_LEN + msgLen;
+        bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
         loop(3) {
           int rabinPubKey = this.rabinPubKeyArray[pubIndex];
@@ -74,15 +73,18 @@ contract TokenRouteCheck {
         }
         require(verifyCount >= 2);
 
-        RabinUtil.checkOutputPoint(prevouts, i, rabinMsg);
+        PayloadU4Data u4 = RabinUtil.loadPayloadU4(rabinMsg);
+        require(u4.outpoint == prevouts[i * 36: (i + 1) * 36]);
 
-        bytes lockingScript = RabinUtil.getMsgLockingScript(rabinMsg);
-        int lsLen = len(lockingScript);
-        int inputTokenAmount = TokenProto.getTokenAmount(lockingScript, lsLen);
+        bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
+        int amount = Util.fromLEUnsigned(inputTokenAmountArray[i * 8: (i + 1) * 8]);
+        int lsLen = len(tokenScript); 
+        bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, lsLen, address, amount);
+
+        require(hash160(lockingScript) == u4.scriptHash);
         require(tokenID == TokenProto.getTokenID(lockingScript, lsLen));
-        tokenScript = lockingScript;
 
-        sumInputToken = sumInputToken + inputTokenAmount;
+        sumInputToken = sumInputToken + amount;
       }
       i = i + 1;
     }

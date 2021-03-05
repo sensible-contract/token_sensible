@@ -7,8 +7,11 @@ contract tokenGenesis {
   public function unlock(
     SigHashPreimage txPreimage,
     Sig sig,
-    bytes outputScript,
-    int outputSatoshi
+    int genesisSatoshis,
+    bytes tokenScript,
+    int tokenSatoshi,
+    Ripemd160 changeAddress,
+    int changeSatoshis
     ) {
 
     require(Tx.checkPreimageOpt(txPreimage));
@@ -16,46 +19,54 @@ contract tokenGenesis {
     // check sig
     require(checkSig(sig, this.pubKey));
 
+    // TODO: verify rabinMsg
+
     // check input script oracle data
-    bytes data = Util.scriptCode(txPreimage);
-    int dataLen = len(data);
-    bytes tokenName = TokenProto.getTokenName(data, dataLen);
-    bytes tokenSymbol = TokenProto.getTokenSymbol(data, dataLen);
-    int isGenesis = TokenProto.getGenesisFlag(data, dataLen);
+    bytes genesisScript = Util.scriptCode(txPreimage);
+    int dataLen = len(genesisScript);
+    bytes tokenName = TokenProto.getTokenName(genesisScript, dataLen);
+    bytes tokenSymbol = TokenProto.getTokenSymbol(genesisScript, dataLen);
+    int isGenesis = TokenProto.getGenesisFlag(genesisScript, dataLen);
     require(isGenesis == 1);
-    int decimalNum = TokenProto.getDecimalNum(data, dataLen);
-    bytes address = TokenProto.getTokenAddress(data, dataLen);
+    int decimalNum = TokenProto.getDecimalNum(genesisScript, dataLen);
+    bytes address = TokenProto.getTokenAddress(genesisScript, dataLen);
     require(address == b'0000000000000000000000000000000000000000');
-    int tokenValue = TokenProto.getTokenAmount(data, dataLen);
+    int tokenValue = TokenProto.getTokenAmount(genesisScript, dataLen);
     require(tokenValue == 0);
-    bytes tokenID = TokenProto.getTokenID(data, dataLen);
-    require(tokenID == b'000000000000000000000000000000000000000000000000000000000000000000000000');
-    int protoType = TokenProto.getProtoType(data, dataLen);
+    bytes tokenID = TokenProto.getTokenID(genesisScript, dataLen);
+    bool isFirst = false;
+    if (tokenID == b'000000000000000000000000000000000000000000000000000000000000000000000000') {
+      isFirst = true;
+      tokenID = Util.outpoint(txPreimage);
+    } 
+    int protoType = TokenProto.getProtoType(genesisScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
-    // flag == 'oraclesv'
-    bytes flag = TokenProto.getProtoFlag(data, dataLen);
+    bytes flag = TokenProto.getProtoFlag(genesisScript, dataLen);
     require(flag == TokenProto.PROTO_FLAG);
 
-    bytes genesisID = Util.outpoint(txPreimage);
+    // check tokenScript oracle data
+    dataLen = len(tokenScript);
 
-    // check outputScript oracle data
-    dataLen = len(outputScript);
-
-    require(tokenName == TokenProto.getTokenName(outputScript, dataLen));
-    require(tokenSymbol == TokenProto.getTokenSymbol(outputScript, dataLen));
-    isGenesis = TokenProto.getGenesisFlag(outputScript, dataLen);
-    require(isGenesis == 0);
-    require(decimalNum == TokenProto.getDecimalNum(outputScript, dataLen));
-    tokenID = TokenProto.getTokenID(outputScript, dataLen);
-    require(tokenID == genesisID);
-    protoType = TokenProto.getProtoType(outputScript, dataLen);
+    require(tokenName == TokenProto.getTokenName(tokenScript, dataLen));
+    require(tokenSymbol == TokenProto.getTokenSymbol(tokenScript, dataLen));
+    require(0 == TokenProto.getGenesisFlag(tokenScript, dataLen));
+    require(decimalNum == TokenProto.getDecimalNum(tokenScript, dataLen));
+    require(tokenID == TokenProto.getTokenID(tokenScript, dataLen));
+    protoType = TokenProto.getProtoType(tokenScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
-    // flag == 'oraclesv'
-    flag = TokenProto.getProtoFlag(outputScript, dataLen);
-    require(flag == TokenProto.PROTO_FLAG);
+    require(TokenProto.PROTO_FLAG == TokenProto.getProtoFlag(tokenScript, dataLen));
 
-    bytes output = Util.buildOutput(outputScript, outputSatoshi);
-    bytes hashOutput = hash256(output);
+    bytes genesisOutput = b'';
+    if (genesisSatoshis > 0) {
+      genesisOutput = Util.buildOutput(genesisScript, genesisSatoshis);
+    }
+    bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshi);
+    bytes changeOutput = b'';
+    if (changeSatoshis > 0) {
+      bytes changeScript = Util.buildPublicKeyHashScript(changeAddress);
+      changeOutput = Util.buildOutput(changeScript, changeSatoshis);
+    }
+    bytes hashOutput = hash256(genesisOutput + tokenOutput + changeOutput);
     require(hashOutput == Util.hashOutputs(txPreimage));
   }
 }

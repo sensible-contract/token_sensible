@@ -78,5 +78,19 @@ library TxUtil {
         return res;
     }
 
-
+    static function getScriptCodeFromOutput(bytes output): bytes {
+        bytes res = b'';
+        int opcode = unpack(output[4:5] + b'');
+        // op_pushdata
+		if (opcode <= 75) {
+            res = output[5:];
+		} else if (opcode == 76) {
+            res = output[6:];
+		} else if (opcode == 77) {
+            res = output[7:];
+		} else if (opcode == 76) {
+            res = output[9:];
+		}
+        return res;
+    }
 }

@@ -9,6 +9,7 @@ const {
   PubKey,
   Sig,
   Bytes,
+  Ripemd160
 } = require('scryptlib');
 const {
   loadDesc,
@@ -48,6 +49,8 @@ buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const decimalNum = Buffer.from('08', 'hex')
 const rabinPubKeyArray = [0, 0, 0]
 const routeCheckCodeHash = Buffer.alloc(20, 0).toString('hex')
+const unlockContractCodeHash = routeCheckCodeHash
+const genesisHash = routeCheckCodeHash
 const tokenID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
   Buffer.alloc(4, 0),
@@ -56,7 +59,7 @@ const tokenID = Buffer.concat([
 let genesis, result, genesisScript
 
 function createToken(oracleData) {
-  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash))
+  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
   token.setDataPart(oracleData.toString('hex'))
   const lockingScript = token.lockingScript
   tx.addOutput(new bsv.Transaction.Output({
@@ -90,14 +93,22 @@ function createToken(oracleData) {
     inputSatoshis: inputAmount
   }
 
-  result = genesis.unlock(new SigHashPreimage(toHex(preimage)), new Sig(toHex(sig)), new Bytes(lockingScript.toHex()), outputAmount).verify(txContext)
+  result = genesis.unlock(
+    new SigHashPreimage(toHex(preimage)), 
+    new Sig(toHex(sig)), 
+    0,
+    new Bytes(lockingScript.toHex()), 
+    outputAmount,
+    new Ripemd160(address1.hashBuffer.toString('hex')),
+    0,
+    ).verify(txContext)
   return result
 }
 
 describe('Test genesis contract unlock In Javascript', () => {
 
   beforeEach(() => {
-    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash))
+    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
     token.setDataPart(Buffer.alloc(TokenProto.getHeaderLen(), 0).toString('hex'))
     const lockingScript = token.lockingScript.toBuffer()
     genesis = new Genesis(new PubKey(toHex(issuerPubKey)))

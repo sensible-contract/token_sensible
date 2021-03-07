@@ -1,12 +1,17 @@
 import "util.scrypt";
 import "tokenProto.scrypt";
+import "rabinUtil.scrypt";
 
-contract tokenGenesis {
+contract TokenGenesis {
   PubKey pubKey;
+  int[3] rabinPubKeyArray;
 
   public function unlock(
     SigHashPreimage txPreimage,
     Sig sig,
+    bytes rabinMsg,
+    bytes[3] rabinPaddingArray,
+    int[3] rabinSigArray,
     int genesisSatoshis,
     bytes tokenScript,
     int tokenSatoshi,
@@ -14,12 +19,10 @@ contract tokenGenesis {
     int changeSatoshis
     ) {
 
-    require(Tx.checkPreimageOpt(txPreimage));
+    require(Tx.checkPreimage(txPreimage));
 
     // check sig
     require(checkSig(sig, this.pubKey));
-
-    // TODO: verify rabinMsg
 
     // check input script oracle data
     bytes genesisScript = Util.scriptCode(txPreimage);
@@ -44,6 +47,17 @@ contract tokenGenesis {
     bytes flag = TokenProto.getProtoFlag(genesisScript, dataLen);
     require(flag == TokenProto.PROTO_FLAG);
 
+    // check the rabin msg
+    if (!isFirst) {
+      bytes thisOutpoint = Util.outpoint(txPreimage);
+      int verifyCount = RabinUtil.verifyMsgThree(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray);
+      require(verifyCount > 2);
+
+      PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
+      require(pl.byTxId == thisOutpoint[ : 32]);
+      require(pl.outpoint == tokenID || hash160(genesisScript) == pl.scriptHash);
+    }
+
     // check tokenScript oracle data
     dataLen = len(tokenScript);
 
@@ -58,7 +72,8 @@ contract tokenGenesis {
 
     bytes genesisOutput = b'';
     if (genesisSatoshis > 0) {
-      genesisOutput = Util.buildOutput(genesisScript, genesisSatoshis);
+      bytes newGenesisScript = TokenProto.getNewGenesisScript(genesisScript, len(genesisScript), tokenID);
+      genesisOutput = Util.buildOutput(newGenesisScript, genesisSatoshis);
     }
     bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshi);
     bytes changeOutput = b'';

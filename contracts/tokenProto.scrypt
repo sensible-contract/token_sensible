@@ -87,4 +87,8 @@ library TokenProto {
     ): bytes {
     return tokenCode + codeHash + tokenName + b'00' + decimalNum + tokenAddress + num2bin(tokenAmount, 8) + tokenID + num2bin(TokenProto.PROTO_TYPE, 4) + TokenProto.PROTO_FLAG;
   }
+
+  static function getNewGenesisScript(bytes script, int slen, bytes tokenID): bytes {
+    return script[: slen - TokenProto.TOKEN_ID_OFFSET] + tokenID + script[slen - TokenProto.TYPE_OFFSET: ];
+  }
 }

@@ -81,6 +81,16 @@ token.getNewTokenScript = function(scriptBuf, address, tokenAmount) {
   return newScript
 }
 
+token.getNewGenesisScript = function(scriptBuf, tokenID) {
+  const firstBuf = scriptBuf.subarray(0, scriptBuf.length - TOKEN_ID_OFFSET)
+  const newScript = Buffer.concat([
+    firstBuf,
+    tokenID,
+    scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
+  ])
+  return newScript
+}
+
 token.getNewTokenScriptFromGenesis = function(scriptBuf, addressBuf, tokenAmount, tokenID) {
   const amountBuf = Buffer.alloc(8, 0)
   amountBuf.writeBigUInt64LE(BigInt(tokenAmount))

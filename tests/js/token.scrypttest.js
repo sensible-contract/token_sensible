@@ -97,11 +97,11 @@ function genContract(name, use_desc) {
 }
 
 function initContract() {
-  const use_desc = true
+  const use_desc = false
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
-  TokenSell = genContract('tokenSell', true)
+  TokenSell = genContract('tokenSell', use_desc)
 }
 
 function initContractHash() {
@@ -619,7 +619,27 @@ function unlockFromContract(scriptHash=null) {
     inputIndex: 2, 
     inputSatoshis: inputSatoshis
   }
-  return {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2}
+  const satoshiBuf = Buffer.alloc(8, 0)
+  satoshiBuf.writeBigUInt64LE(BigInt(inputSatoshis))
+  const scriptBuf = token.lockingScript.toBuffer()
+  const tokenScriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(scriptBuf))
+  const rabinMsg = Buffer.concat([
+    txidBuf,
+    indexBuf,
+    satoshiBuf,
+    tokenScriptHash,
+    txidBuf,
+  ])
+  const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
+  const rabinSign = rabinSignResult.signature
+  const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
+  let rabinPaddingArray = []
+  let rabinSigArray = []
+  for (let i = 0; i < 3; i++) {
+    rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
+    rabinSigArray.push(rabinSign)
+  }
+  return {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray}
 }
 
 describe('Test token contract unlock In Javascript', () => {
@@ -650,51 +670,72 @@ describe('Test token contract unlock In Javascript', () => {
 
   it('it should succeed when using unlockFromContract', () => {
     // create the contract tx
-    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2} = unlockFromContract()
+    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray} = unlockFromContract()
+    const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
+    const prevTokenAmount = 0
     const result = token.unlockFromContract(
       new SigHashPreimage(toHex(preimage)),
       new Bytes(prevouts.toString('hex')),
+      new Bytes(rabinMsg.toString('hex')),
+      rabinPaddingArray,
+      rabinSigArray,
       new Bytes(prevTx.serialize()),
       0,
       1,
       new Bytes(checkScriptTx.serialize()),
       0,
       2,
-      1
+      1,
+      prevTokenAddress,
+      prevTokenAmount,
     ).verify(txContext)
     expect(result.success, result.error).to.be.true
   });
 
   it('it should failed when unlockFromContract with wrong prevTx', () => {
-    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2} = unlockFromContract()
+    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray} = unlockFromContract()
+    const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
+    const prevTokenAmount = 0
     prevTx.nLockTime = 1
     const result = token.unlockFromContract(
       new SigHashPreimage(toHex(preimage)),
       new Bytes(prevouts.toString('hex')),
+      new Bytes(rabinMsg.toString('hex')),
+      rabinPaddingArray,
+      rabinSigArray,
       new Bytes(prevTx.serialize()),
       0,
       1,
       new Bytes(checkScriptTx.serialize()),
       0,
       2,
-      1
+      1,
+      prevTokenAddress,
+      prevTokenAmount,
     ).verify(txContext)
     expect(result.success, result.error).to.be.false
   });
 
   it('it should failed when unlockFromContract with wrong contract script hash', () => {
     // create the contract tx
-    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2} = unlockFromContract(address2.hashBuffer)
+    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray} = unlockFromContract(address2.hashBuffer)
+    const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
+    const prevTokenAmount = 0
     const result = token.unlockFromContract(
       new SigHashPreimage(toHex(preimage)),
       new Bytes(prevouts.toString('hex')),
+      new Bytes(rabinMsg.toString('hex')),
+      rabinPaddingArray,
+      rabinSigArray,
       new Bytes(prevTx.serialize()),
       0,
       1,
       new Bytes(checkScriptTx.serialize()),
       0,
       2,
-      1
+      1,
+      prevTokenAddress,
+      prevTokenAmount,
     ).verify(txContext)
     expect(result.success, result.error).to.be.false
   });

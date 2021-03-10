@@ -56,8 +56,10 @@ const tokenValue = 1000000
 const buffValue = Buffer.alloc(8, 0)
 buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const decimalNum = Buffer.from('08', 'hex')
-const routeCheckCodeHash = Buffer.alloc(20, 0).toString('hex')
+const routeCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
+const routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
 const unlockContractCodeHash = routeCheckCodeHash
+const unlockContractCodeHashArray = routeCheckCodeHashArray
 let genesisHash
 const tokenID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
@@ -76,7 +78,7 @@ function createToken(oracleData) {
     satoshis: outputAmount
   }))
 
-  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
+  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   token.setDataPart(oracleData.toString('hex'))
   const lockingScript = token.lockingScript
   tx.addOutput(new bsv.Transaction.Output({
@@ -174,7 +176,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       satoshis: outputAmount
     }))
 
-    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
+    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
     token.setDataPart(oracleData.toString('hex'))
     const lockingScript = token.lockingScript
     tx.addOutput(new bsv.Transaction.Output({

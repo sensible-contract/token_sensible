@@ -8,12 +8,12 @@ import "rabinUtil.scrypt";
  */
 contract Token {
   int[3] rabinPubKeyArray;
-  bytes routeContractCodeHash;
-  bytes unlockContractCodeHash;
+  bytes[3] routeContractCodeHashArray;
+  bytes[3] unlockContractCodeHashArray;
   bytes genesisContractHash;
 
   function verifyAmountCheckContract(
-    bytes contractCodeHash,
+    bytes[3] contractCodeHashArray,
     bytes prevouts,
     int contractInputIndex,
     bytes prevScriptTx,
@@ -46,9 +46,9 @@ contract Token {
       pos += 6;
     }
 
-    bytes contractCode = prevScriptCode[: scriptLen - pos];
+    bytes hash = hash160(prevScriptCode[: scriptLen - pos]);
 
-    return hash160(contractCode) == contractCodeHash;
+    return hash == contractCodeHashArray[0] || hash == contractCodeHashArray[1] || hash == contractCodeHashArray[2];
   }
 
   /** 
@@ -84,8 +84,7 @@ contract Token {
 
     require(hash256(prevouts) == Util.hashPrevouts(txPreimage));
 
-    // consider the swap pool will remove token when extract liquidity
-    require(nReceivers >= 0);
+    require(nReceivers > 0);
 
     bytes tokenScript = Util.scriptCode(txPreimage);
     int scriptLen = len(tokenScript);
@@ -101,7 +100,7 @@ contract Token {
     bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
-    res = this.verifyAmountCheckContract(this.routeContractCodeHash, prevouts, contractInputIndex, prevScriptTx, prevScriptOutIndex, tokenID, nReceivers);
+    res = this.verifyAmountCheckContract(this.routeContractCodeHashArray, prevouts, contractInputIndex, prevScriptTx, prevScriptOutIndex, tokenID, nReceivers);
     require(res == true);
   }
 
@@ -137,7 +136,7 @@ contract Token {
 
     require(hash160(prevScriptCode) == contractHash);
 
-    bool res = this.verifyAmountCheckContract(this.unlockContractCodeHash, prevouts, checkScriptInputIndex, checkScriptTx, prevCheckTxOutputIndex, tokenID, nReceivers);
+    bool res = this.verifyAmountCheckContract(this.unlockContractCodeHashArray, prevouts, checkScriptInputIndex, checkScriptTx, prevCheckTxOutputIndex, tokenID, nReceivers);
     require(res == true);
   }
 }

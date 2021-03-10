@@ -60,13 +60,6 @@ const nonGenesisFlag = Buffer.from('00', 'hex')
 const tokenType = Buffer.alloc(4, 0)
 tokenType.writeUInt32LE(1)
 const PROTO_FLAG = Buffer.from('oraclesv')
-const Token = buildContractClass(compileContract('token.scrypt'))
-const RouteCheck = buildContractClass(compileContract('tokenRouteCheck.scrypt'))
-const UnlockContractCheck = buildContractClass(compileContract('tokenUnlockContractCheck.scrypt'))
-//const TokenGenesis = buildContractClass(compileContract('tokenGenesis.scrypt'))
-const TokenSell = buildContractClass(loadDesc('tokenSell_desc.json'))
-//const Token = buildContractClass(loadDesc('token_desc.json'))
-//const RouteCheck = buildContractClass(loadDesc('tokenRouteCheck_desc.json'))
 
 const address1 = privateKey.toAddress()
 const address2 = privateKey2.toAddress()
@@ -79,28 +72,53 @@ const tokenID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
   Buffer.alloc(4, 0),
 ])
+let routeCheckCodeHashArray
+let unlockContractCodeHashArray
 let genesisHash
-let routeCheckCodeHash
-let unlockContractCodeHash
 let tokenInstance = []
 let routeCheckInstance
 let unlockContractCheckInstance
+let tokenContract
 
 const maxInputLimit = 8
 const maxOutputLimit = 4
 
 const decimalNum = Buffer.from('08', 'hex')
 
+let Token, RouteCheck, UnlockContractCheck, TokenSell
+
+function genContract(name, use_desc) {
+  if (use_desc) {
+    return buildContractClass(loadDesc(name + '_desc.json'))
+  }
+  else {
+    return buildContractClass(compileContract(name + '.scrypt'))
+  }
+}
+
+function initContract() {
+  const use_desc = true
+  Token = genContract('token', use_desc)
+  RouteCheck = genContract('tokenRouteCheck', use_desc)
+  UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
+  TokenSell = genContract('tokenSell', true)
+}
+
 function initContractHash() {
   const routeCheckCode = new RouteCheck(rabinPubKeyArray)
   let code = routeCheckCode.lockingScript.toBuffer()
-  routeCheckCodeHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex')
-  //TODO:
+  const routeCheckCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
+  routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
+
   const unlockContract = new UnlockContractCheck(rabinPubKeyArray)
   code = unlockContract.lockingScript.toBuffer()
-  unlockContractCodeHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex')
+  const unlockContractCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
+  unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
 
+  //TODO:
   genesisHash = routeCheckCodeHash
+
+  tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
 }
 
 function genReceiverData(nOutputs, outputTokenArray) {
@@ -195,7 +213,7 @@ function addInputTokens(nTokenInput, nSatoshiInput, nTokenOutputs, outputTokenAd
       PROTO_FLAG
       ])
 
-    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
+    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
     token.setDataPart(oracleData.toString('hex'))
     tokenInstance.push(token)
     const tokenScript = token.lockingScript
@@ -259,7 +277,7 @@ function addOutputTokens(nOutputToken, outputTokenArray, changeSatoshi) {
       tokenType, // type
       PROTO_FLAG
       ])
-    const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
+    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
     //token.replaceAsmVars(asmVars)
     token.setDataPart(oracleData.toString('hex'))
     tx.addOutput(new bsv.Transaction.Output({
@@ -536,7 +554,7 @@ function unlockFromContract(scriptHash=null) {
     PROTO_FLAG
     ])
 
-  const token = new Token(rabinPubKeyArray, new Bytes(routeCheckCodeHash), new Bytes(unlockContractCodeHash), new Bytes(genesisHash))
+  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
   //token.replaceAsmVars(asmVars)
   token.setDataPart(oracleData.toString('hex'))
   const tokenScript = token.lockingScript
@@ -606,6 +624,7 @@ function unlockFromContract(scriptHash=null) {
 
 describe('Test token contract unlock In Javascript', () => {
   before(() => {
+    initContract()
     initContractHash()
   });
 

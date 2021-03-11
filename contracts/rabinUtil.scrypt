@@ -21,7 +21,7 @@ library RabinUtil {
   // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <contractHash(20 bytes)>
   // rabin sig length
   static int U4_RABIN_MSG_LEN = 64;
-  static int RABIN_SIG_LEN = 128;
+  static int RABIN_SIG_LEN = 1024;
   static int PADDING_SIZE_LEN = 2;
 
   static function rabinHash(bytes x): int {

@@ -108,3 +108,12 @@ token.getNewTokenScriptFromGenesis = function(scriptBuf, addressBuf, tokenAmount
   ])
   return newScript
 }
+
+token.getNewGenesisScript = function(scriptBuf, tokenID) {
+  const newScript = Buffer.concat([
+    scriptBuf.subarray(0, scriptBuf.length - TOKEN_ID_OFFSET),
+    tokenID,
+    scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
+  ])
+  return newScript
+}

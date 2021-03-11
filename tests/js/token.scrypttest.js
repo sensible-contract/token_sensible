@@ -42,6 +42,7 @@ const rabinPubKeyArray = [rabinPubKey, rabinPubKey, rabinPubKey]
 console.log('rabin key pair:', rabinPrivateKey, rabinPubKey)
 
 const TokenProto = require('../../deployments/tokenProto')
+const TokenUtil = require('../../deployments/tokenUtil')
 
 // make a copy since it will be mutated
 let tx
@@ -352,7 +353,7 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
 
     for (let j = 0; j < 3; j++) {
       const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
-      const sigBuf = toBufferLE(rabinSignResult.signature, 128)
+      const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
       rabinSignArray = Buffer.concat([rabinSignArray, sigBuf])
       const paddingCountBuf = Buffer.alloc(2, 0)
       paddingCountBuf.writeUInt16LE(rabinSignResult.paddingByteCount)

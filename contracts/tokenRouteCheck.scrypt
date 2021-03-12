@@ -45,9 +45,9 @@ contract TokenRouteCheck {
     int i = 0;
     int sumInputToken = 0;
     int paddingPos = 0;
-    require(nSenders <= 8);
+    require(nSenders <= 3);
     // max support loop num input token
-    loop(8) {
+    loop(3) {
       if (i < nSenders) {
         int pubIndex = 0;
         // verify rabin signature
@@ -92,8 +92,8 @@ contract TokenRouteCheck {
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
     i = 0;
     int sumOutputToken = 0;
-    require(nReceivers <= 4);
-    loop(4) {
+    require(nReceivers <= 3);
+    loop(3) {
       if (i < nReceivers) {
         bytes address = receiverArray[i * TokenProto.TOKEN_ADDRESS_LEN: (i + 1) * TokenProto.TOKEN_ADDRESS_LEN];
         int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[i * TokenProto.TOKEN_AMOUNT_LEN: (i + 1) * TokenProto.TOKEN_AMOUNT_LEN]);

@@ -590,10 +590,8 @@ TokenUtil.createTokenTransfer = function(
     let sig = signTx(tx, senderPrivKey, tokenScript.toASM(), satoshis, inputIndex=inIndex, sighashType=sigtype)
 
     const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash.toString('hex')))
-    const unlockingScript = tokenContract.route(
+    const unlockingScript = tokenContract.unlock(
       new SigHashPreimage(toHex(preimage)),
-      new PubKey(toHex(senderPrivKey.publicKey)),
-      new Sig(toHex(sig)),
       new Bytes(prevouts.toString('hex')),
       new Bytes(tokenRabinMsg.toString('hex')),
       tokenRabinPaddingArray,
@@ -603,7 +601,13 @@ TokenUtil.createTokenTransfer = function(
       0,
       tokenOutputLen,
       new Bytes(prevPrevTokenAddress.hashBuffer.toString('hex')),
-      prevPrevTokenAmount
+      prevPrevTokenAmount,
+      new PubKey(toHex(senderPrivKey.publicKey)),
+      new Sig(toHex(sig)),
+      0,
+      new Bytes('00'),
+      0,
+      1
     ).toScript()
     tx.inputs[inIndex].setScript(unlockingScript)
     //console.log('token transfer args:', toHex(preimage), toHex(senderPrivKey.publicKey), toHex(sig), tokenInputLen, prevouts.toString('hex'), rabinPubKey, rabinMsgArray.toString('hex'), rabinPaddingArray.toString('hex'), rabinSigArray.toString('hex'), tokenOutputLen, recervierArray.toString('hex'), receiverTokenAmountArray.toString('hex'), outputSatoshiArray.toString('hex'), changeSatoshis, changeAddress.hashBuffer.toString('hex'))

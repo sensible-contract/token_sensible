@@ -54,27 +54,29 @@ contract Token {
     return hash == contractCodeHashArray[0] || hash == contractCodeHashArray[1] || hash == contractCodeHashArray[2];
   }
 
-  public function route(
+  // operation: 1 transfer, 2 unlockFromContract
+  public function unlock(
     SigHashPreimage txPreimage,
-    PubKey senderPubKey,
-    Sig senderSig,
     bytes prevouts,
     bytes rabinMsg,
     bytes[3] rabinPaddingArray,
     int[3] rabinSigArray,
-    int contractInputIndex,
-    bytes prevScriptTx,
-    int prevScriptOutIndex,
+    int checkInputIndex,
+    bytes checkScriptTx,
+    int checkScriptTxOutIndex,
     int nReceivers,
     bytes prevTokenAddress,
-    int prevTokenAmount
+    int prevTokenAmount,
+    PubKey senderPubKey, // only transfer need
+    Sig senderSig, // only transfer need
+    int lockContractInputIndex, // only unlockFromContract need
+    bytes lockContractTx, // only unlockFromContract need
+    int lockContractTxOutIndex, // only unlockFromContract need
+    int operation
   ) {
 
     require(Tx.checkPreimage(txPreimage));
-
     require(hash256(prevouts) == Util.hashPrevouts(txPreimage));
-
-    require(nReceivers > 0);
 
     bytes tokenScript = Util.scriptCode(txPreimage);
     int scriptLen = len(tokenScript);
@@ -83,64 +85,37 @@ contract Token {
 
     bytes code = TokenProto.getContractCode(tokenScript, scriptLen);
     bytes tokenCodeHash = hash160(code);
+    bytes[3] hashArray = [b'', b'', b''];
 
-    // authorize
-    require(hash160(senderPubKey) == senderAddress);
-    require(checkSig(senderSig, senderPubKey));
+    if (operation == 1) {
+      require(nReceivers > 0);
+      hashArray = this.routeContractCodeHashArray;
+      // authorize
+      require(hash160(senderPubKey) == senderAddress);
+      require(checkSig(senderSig, senderPubKey));
+    } else if (operation == 2) {
+      require(nReceivers >= 0);
+      hashArray = this.unlockContractCodeHashArray;
 
-    // verify rabin signature
-    bytes thisOutpoint = Util.outpoint(txPreimage);
-    bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
-    require(res == true);
+      // verify the lockContractTx
+      bytes prevScriptTxId = prevouts[lockContractInputIndex * TxUtil.OUTPOINT_LEN: lockContractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
+      require(hash256(lockContractTx) == prevScriptTxId);
 
-    res = this.verifyAmountCheckContract(this.routeContractCodeHashArray, prevouts, contractInputIndex, prevScriptTx, prevScriptOutIndex, tokenID, tokenCodeHash, nReceivers);
-    require(res == true);
-  }
+      bytes contractHash = TokenProto.getTokenAddress(tokenScript, scriptLen);
 
-  public function unlockFromContract(
-    SigHashPreimage txPreimage,
-    bytes prevouts,
-    bytes rabinMsg,
-    bytes[3] rabinPaddingArray,
-    int[3] rabinSigArray,
-    bytes prevContractTx,
-    int prevContractOutIndex,
-    int contractInputIndex,
-    bytes checkScriptTx,
-    int prevCheckTxOutputIndex,
-    int checkScriptInputIndex,
-    int nReceivers,
-    bytes prevTokenAddress,
-    int prevTokenAmount
-  ) {
-    require(Tx.checkPreimage(txPreimage));
-    //require(Tx.checkPreimageOpt(txPreimage));
+      bytes prevScriptCode = TxUtil.readOutputScript(lockContractTx, lockContractTxOutIndex);
 
-    // check prevouts
-    require(hash256(prevouts) == Util.hashPrevouts(txPreimage));
-
-    // check the script
-    bytes tokenScript = Util.scriptCode(txPreimage);
-    int scriptLen = len(tokenScript);
-    bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
-    bytes tokenCodeHash = hash160(TokenProto.getContractCode(tokenScript, scriptLen));
+      require(hash160(prevScriptCode) == contractHash);
+    } else {
+      require(false);
+    }
 
     // verify rabin signature
     bytes thisOutpoint = Util.outpoint(txPreimage);
     bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
-    // verify the prevContractTx
-    bytes prevScriptTxId = prevouts[contractInputIndex * TxUtil.OUTPOINT_LEN: contractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
-    require(hash256(prevContractTx) == prevScriptTxId);
-
-    bytes contractHash = TokenProto.getTokenAddress(tokenScript, scriptLen);
-
-    bytes prevScriptCode = TxUtil.readOutputScript(prevContractTx, prevContractOutIndex);
-
-    require(hash160(prevScriptCode) == contractHash);
-
-    res = this.verifyAmountCheckContract(this.unlockContractCodeHashArray, prevouts, checkScriptInputIndex, checkScriptTx, prevCheckTxOutputIndex, tokenID, tokenCodeHash, nReceivers);
+    res = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, checkScriptTxOutIndex, tokenID, tokenCodeHash, nReceivers);
     require(res == true);
   }
 }

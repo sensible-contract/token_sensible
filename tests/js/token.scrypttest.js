@@ -44,6 +44,9 @@ console.log('rabin key pair:', rabinPrivateKey, rabinPubKey)
 const TokenProto = require('../../deployments/tokenProto')
 const TokenUtil = require('../../deployments/tokenUtil')
 
+const OP_TRANSFER = 1
+const OP_UNLOCK_FROM_CONTRACT = 2
+
 // make a copy since it will be mutated
 let tx
 let prevScriptTx
@@ -82,8 +85,8 @@ let routeCheckInstance
 let unlockContractCheckInstance
 let tokenContract
 
-const maxInputLimit = 8
-const maxOutputLimit = 4
+const maxInputLimit = 3
+const maxOutputLimit = 3
 
 const decimalNum = Buffer.from('08', 'hex')
 
@@ -99,7 +102,7 @@ function genContract(name, use_desc) {
 }
 
 function initContract() {
-  const use_desc = false
+  const use_desc = true
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
@@ -505,10 +508,8 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     rabinSigArray.push(rabinSign)
   }
 
-  const result = token.route(
+  const result = token.unlock(
     new SigHashPreimage(toHex(preimage)),
-    new PubKey(toHex(privateKey.publicKey)),
-    new Sig(toHex(sig)),
     new Bytes(prevouts.toString('hex')),
     new Bytes(rabinMsg.toString('hex')),
     rabinPaddingArray,
@@ -518,7 +519,13 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     prevScriptOutIndex,
     nOutputs,
     new Bytes(prevTokenAddress.toString('hex')),
-    prevTokenAmount
+    prevTokenAmount,
+    new PubKey(toHex(privateKey.publicKey)),
+    new Sig(toHex(sig)),
+    0,
+    new Bytes('00'),
+    0,
+    OP_TRANSFER
   ).verify(txContext)
   if (expected === true) {
     expect(result.success, result.error).to.be.true
@@ -680,21 +687,24 @@ describe('Test token contract unlock In Javascript', () => {
     const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray} = unlockFromContract()
     const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
     const prevTokenAmount = 0
-    const result = token.unlockFromContract(
+    const result = token.unlock(
       new SigHashPreimage(toHex(preimage)),
       new Bytes(prevouts.toString('hex')),
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
-      new Bytes(prevTx.serialize()),
-      0,
-      1,
+      2,
       new Bytes(checkScriptTx.serialize()),
       0,
-      2,
       1,
       prevTokenAddress,
       prevTokenAmount,
+      new PubKey('00'),
+      new Sig('00'),
+      1,
+      new Bytes(prevTx.serialize()),
+      0,
+      OP_UNLOCK_FROM_CONTRACT
     ).verify(txContext)
     expect(result.success, result.error).to.be.true
   });
@@ -704,21 +714,24 @@ describe('Test token contract unlock In Javascript', () => {
     const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
     const prevTokenAmount = 0
     prevTx.nLockTime = 1
-    const result = token.unlockFromContract(
+    const result = token.unlock(
       new SigHashPreimage(toHex(preimage)),
       new Bytes(prevouts.toString('hex')),
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
-      new Bytes(prevTx.serialize()),
-      0,
-      1,
+      2,
       new Bytes(checkScriptTx.serialize()),
       0,
-      2,
       1,
       prevTokenAddress,
       prevTokenAmount,
+      new PubKey('00'),
+      new Sig('00'),
+      1,
+      new Bytes(prevTx.serialize()),
+      0,
+      OP_UNLOCK_FROM_CONTRACT
     ).verify(txContext)
     expect(result.success, result.error).to.be.false
   });
@@ -728,21 +741,24 @@ describe('Test token contract unlock In Javascript', () => {
     const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray} = unlockFromContract(address2.hashBuffer)
     const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
     const prevTokenAmount = 0
-    const result = token.unlockFromContract(
+    const result = token.unlock(
       new SigHashPreimage(toHex(preimage)),
       new Bytes(prevouts.toString('hex')),
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
-      new Bytes(prevTx.serialize()),
-      0,
-      1,
+      2,
       new Bytes(checkScriptTx.serialize()),
       0,
-      2,
       1,
       prevTokenAddress,
       prevTokenAmount,
+      new PubKey('00'),
+      new Sig('00'),
+      1,
+      new Bytes(prevTx.serialize()),
+      0,
+      OP_UNLOCK_FROM_CONTRACT
     ).verify(txContext)
     expect(result.success, result.error).to.be.false
   });

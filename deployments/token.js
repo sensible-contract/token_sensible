@@ -35,9 +35,9 @@ const rabinPubKey = Rabin.privKeyToPubKey(rabinPrivateKey.p, rabinPrivateKey.q)
 const rabinPubKeyArray = [rabinPubKey, rabinPubKey, rabinPubKey]
 
 const TokenUtil = require('./tokenUtil')
-const utxo1 =  '5804c8f9ee6b42f8c1e6b7db97b3228658d45a60940afaa82b26549867d18e2d'
-const outIndex1 = 3
-const bsvBalance1 = 6015632
+const utxo1 =  '757460adb1561ce3a7ba9ef4c9faf374456a850857c393d407a5f806ef7f353f'
+const outIndex1 = 0
+const bsvBalance1 = 10000000
 
 const dustLimit = 546
 
@@ -244,15 +244,15 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
 
     const {genesisTx, tokenTx} = createNewToken()
 
-    //await sendTx(genesisTx)
-    //await sendTx(tokenTx)
+    await sendTx(genesisTx)
+    await sendTx(tokenTx)
     console.log('genesisTx id:', genesisTx.id, genesisTx.serialize().length / 2)
     console.log('tokenTx id:', tokenTx.id, tokenTx.serialize().length / 2)
 
     // 1 input token with 3 output token
     const {scriptTx, transferTx} = createTokenTransferTx(genesisTx, tokenTx, 1)
-    //await sendTx(scriptTx)
-    //await sendTx(transferTx)
+    await sendTx(scriptTx)
+    await sendTx(transferTx)
 
     console.log('checkScriptTx id:', scriptTx.id, scriptTx.serialize().length / 2)
     console.log('transferTx id:', transferTx.id, transferTx.serialize().length / 2)

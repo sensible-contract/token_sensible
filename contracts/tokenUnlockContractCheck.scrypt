@@ -2,14 +2,10 @@ import "util.scrypt";
 import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
 
-// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenID
+// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenCodeHash + tokenID
 contract TokenUnlockContractCheck {
   int[3] rabinPubKeyArray;
     
-  /**
-   * @param changeSatoshis {int} change satoshis amount 
-   * @param changeAddress {Ripemd160} change address 
-  */
   public function unlock(
     SigHashPreimage txPreimage,
     int nSenders,
@@ -34,10 +30,10 @@ contract TokenUnlockContractCheck {
     int scriptLen = len(scriptCode);
     bytes tokenID = scriptCode[scriptLen - TokenProto.TOKEN_ID_LEN: ];
 
-    tokenID = scriptCode[scriptLen - TokenProto.TOKEN_ID_LEN: scriptLen];
-    int tokenScriptLen = len(tokenScript); 
-    require(tokenID == TokenProto.getTokenID(tokenScript, tokenScriptLen));
-    int pos = TokenProto.TOKEN_ID_LEN;
+    int tokenScriptLen = len(tokenScript);
+    int pos = TokenProto.TOKEN_ID_LEN + 20;
+    bytes tokenCodeHash = scriptCode[scriptLen - pos: scriptLen - TokenProto.TOKEN_ID_LEN];
+    require(tokenCodeHash == hash160(TokenProto.getContractCode(tokenScript, tokenScriptLen)));
 
     int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
     pos += 1;
@@ -95,7 +91,7 @@ contract TokenUnlockContractCheck {
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
     i = 0;
     int sumOutputToken = 0;
-    require(nOutputs < 10);
+    require(nOutputs <= 10);
     int tokenIndex = 0;
     int otherOutputIndex = 0;
     loop(10) {
@@ -124,7 +120,7 @@ contract TokenUnlockContractCheck {
       }
       i = i + 1;
     }
-    require(sumInputToken == sumOutputToken);
+    require(sumInputToken >= sumOutputToken);
     bytes hashOutputs = hash256(outputs);
     require(hashOutputs == Util.hashOutputs(txPreimage));
   }

@@ -76,6 +76,7 @@ const tokenID = Buffer.concat([
 let routeCheckCodeHashArray
 let unlockContractCodeHashArray
 let genesisHash
+let tokenCodeHash
 let tokenInstance = []
 let routeCheckInstance
 let unlockContractCheckInstance
@@ -120,6 +121,9 @@ function initContractHash() {
   genesisHash = routeCheckCodeHash
 
   tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
+  tokenContract.setDataPart(Buffer.alloc(TokenProto.getHeaderLen(), 0).toString('hex'))
+  code = TokenProto.getContractCode(tokenContract.lockingScript.toBuffer())
+  tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(code)
 }
 
 function genReceiverData(nOutputs, outputTokenArray) {
@@ -153,6 +157,7 @@ function genRouteCheckTx(nOutputs, outputTokenArray) {
     receiverTokenAmountArray,
     recervierArray,
     nReceiverBuf,
+    tokenCodeHash,
     tokenID,
   ])
   routeCheck.setDataPart(data.toString('hex'))
@@ -180,6 +185,7 @@ function genUnlockContractCheckTx(nOutputs, outputTokenArray) {
     receiverTokenAmountArray,
     recervierArray,
     nReceiverBuf,
+    tokenCodeHash,
     tokenID,
   ])
   unlockContractCheck.setDataPart(data.toString('hex'))

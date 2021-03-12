@@ -341,6 +341,7 @@ TokenUtil.createToken = function(
  * @param tokenOutputArray {object[]} the token output array
  * @param rabinPubKeyArray {BigInt[]} rabin pubkey array
  * @param tokenID {Buffer} the tokenID
+ * @param tokenCodeHash {Buffer} the token contract code hash
 */
 TokenUtil.createRouteCheckTx = function(
   inputTxId, 
@@ -353,7 +354,8 @@ TokenUtil.createRouteCheckTx = function(
   fee,
   tokenOutputArray,
   rabinPubKeyArray,
-  tokenID
+  tokenID,
+  tokenCodeHash
   ) {
   const tx = new bsv.Transaction()
   tx.addInput(new bsv.Transaction.Input.PublicKeyHash({
@@ -382,6 +384,7 @@ TokenUtil.createRouteCheckTx = function(
     receiverTokenAmountArray,
     recervierArray,
     nReceiverBuf,
+    tokenCodeHash,
     tokenID,
   ])
   routeCheckCode.setDataPart(data.toString('hex'))
@@ -392,7 +395,7 @@ TokenUtil.createRouteCheckTx = function(
     satoshis: outputSatoshis,
   }))
 
-  console.log('script tx info:', outputSatoshis, data.toString('hex'))
+  //console.log('script tx info:', outputSatoshis, data.toString('hex'))
 
   const changeAmount = inputAmount - fee - outputSatoshis
   tx.addOutput(new bsv.Transaction.Output({

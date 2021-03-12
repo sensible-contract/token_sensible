@@ -14,7 +14,7 @@ contract TokenGenesis {
     int[3] rabinSigArray,
     int genesisSatoshis,
     bytes tokenScript,
-    int tokenSatoshi,
+    int tokenSatoshis,
     Ripemd160 changeAddress,
     int changeSatoshis
     ) {
@@ -75,7 +75,7 @@ contract TokenGenesis {
       bytes newGenesisScript = TokenProto.getNewGenesisScript(genesisScript, len(genesisScript), tokenID);
       genesisOutput = Util.buildOutput(newGenesisScript, genesisSatoshis);
     }
-    bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshi);
+    bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshis);
     bytes changeOutput = b'';
     if (changeSatoshis > 0) {
       bytes changeScript = Util.buildPublicKeyHashScript(changeAddress);

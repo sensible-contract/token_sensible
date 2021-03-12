@@ -19,6 +19,7 @@ contract Token {
     bytes prevScriptTx,
     int prevScriptOutIndex,
     bytes tokenID,
+    bytes tokenCodeHash,
     int nReceivers
   ): bool {
     // verify script
@@ -30,10 +31,12 @@ contract Token {
 
     require(tokenID == prevScriptCode[scriptLen - TokenProto.TOKEN_ID_LEN: scriptLen]);
 
-    int nReceivers2 = Util.fromLEUnsigned(prevScriptCode[scriptLen - TokenProto.TOKEN_ID_LEN - 1: scriptLen - TokenProto.TOKEN_ID_LEN]);
+    require(tokenCodeHash == prevScriptCode[scriptLen - 20 - TokenProto.TOKEN_ID_LEN: scriptLen - TokenProto.TOKEN_ID_LEN]);
+
+    int nReceivers2 = Util.fromLEUnsigned(prevScriptCode[scriptLen - TokenProto.TOKEN_ID_LEN - 20 - 1: scriptLen - 20 - TokenProto.TOKEN_ID_LEN]);
     require(nReceivers2 == nReceivers);
 
-    int pos = TokenProto.TOKEN_ID_LEN + 1 + TokenProto.TOKEN_ADDRESS_LEN * nReceivers + TokenProto.TOKEN_AMOUNT_LEN * nReceivers;
+    int pos = TokenProto.TOKEN_ID_LEN + 20 + 1 + TokenProto.TOKEN_ADDRESS_LEN * nReceivers + TokenProto.TOKEN_AMOUNT_LEN * nReceivers;
 
     // code hash do not count op_return + data length + data
     if (pos < 75) {
@@ -78,6 +81,9 @@ contract Token {
     bytes senderAddress = TokenProto.getTokenAddress(tokenScript, scriptLen);
     bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
 
+    bytes code = TokenProto.getContractCode(tokenScript, scriptLen);
+    bytes tokenCodeHash = hash160(code);
+
     // authorize
     require(hash160(senderPubKey) == senderAddress);
     require(checkSig(senderSig, senderPubKey));
@@ -87,7 +93,7 @@ contract Token {
     bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
-    res = this.verifyAmountCheckContract(this.routeContractCodeHashArray, prevouts, contractInputIndex, prevScriptTx, prevScriptOutIndex, tokenID, nReceivers);
+    res = this.verifyAmountCheckContract(this.routeContractCodeHashArray, prevouts, contractInputIndex, prevScriptTx, prevScriptOutIndex, tokenID, tokenCodeHash, nReceivers);
     require(res == true);
   }
 
@@ -114,26 +120,27 @@ contract Token {
     require(hash256(prevouts) == Util.hashPrevouts(txPreimage));
 
     // check the script
-    bytes lockingScript = Util.scriptCode(txPreimage);
-    int scriptLen = len(lockingScript);
-    bytes tokenID = TokenProto.getTokenID(lockingScript, scriptLen);
+    bytes tokenScript = Util.scriptCode(txPreimage);
+    int scriptLen = len(tokenScript);
+    bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
+    bytes tokenCodeHash = hash160(TokenProto.getContractCode(tokenScript, scriptLen));
 
     // verify rabin signature
     bytes thisOutpoint = Util.outpoint(txPreimage);
-    bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, lockingScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
+    bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
     // verify the prevContractTx
     bytes prevScriptTxId = prevouts[contractInputIndex * TxUtil.OUTPOINT_LEN: contractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
     require(hash256(prevContractTx) == prevScriptTxId);
 
-    bytes contractHash = TokenProto.getTokenAddress(lockingScript, scriptLen);
+    bytes contractHash = TokenProto.getTokenAddress(tokenScript, scriptLen);
 
     bytes prevScriptCode = TxUtil.readOutputScript(prevContractTx, prevContractOutIndex);
 
     require(hash160(prevScriptCode) == contractHash);
 
-    res = this.verifyAmountCheckContract(this.unlockContractCodeHashArray, prevouts, checkScriptInputIndex, checkScriptTx, prevCheckTxOutputIndex, tokenID, nReceivers);
+    res = this.verifyAmountCheckContract(this.unlockContractCodeHashArray, prevouts, checkScriptInputIndex, checkScriptTx, prevCheckTxOutputIndex, tokenID, tokenCodeHash, nReceivers);
     require(res == true);
   }
 }

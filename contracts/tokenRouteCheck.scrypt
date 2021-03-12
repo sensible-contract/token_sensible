@@ -2,14 +2,10 @@ import "util.scrypt";
 import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
 
-// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenID
+// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenContractCodeHash +  tokenID
 contract TokenRouteCheck {
   int[3] rabinPubKeyArray;
     
-  /**
-   * @param changeSatoshis {int} change satoshis amount 
-   * @param changeAddress {Ripemd160} change address 
-  */
   public function unlock(
     SigHashPreimage txPreimage,
     int nSenders,
@@ -33,8 +29,10 @@ contract TokenRouteCheck {
     int scriptLen = len(scriptCode);
     bytes tokenID = scriptCode[scriptLen - TokenProto.TOKEN_ID_LEN: ];
 
-    tokenID = scriptCode[scriptLen - TokenProto.TOKEN_ID_LEN: scriptLen];
-    int pos = TokenProto.TOKEN_ID_LEN;
+    int tokenScriptLen = len(tokenScript);
+    int pos = TokenProto.TOKEN_ID_LEN + 20;
+    bytes tokenCodeHash = scriptCode[scriptLen - pos: scriptLen - TokenProto.TOKEN_ID_LEN];
+    require(tokenCodeHash == hash160(TokenProto.getContractCode(tokenScript, tokenScriptLen)));
 
     int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
     pos += 1;
@@ -95,7 +93,6 @@ contract TokenRouteCheck {
     i = 0;
     int sumOutputToken = 0;
     require(nReceivers <= 4);
-    int tokenScriptLen = len(tokenScript);
     loop(4) {
       if (i < nReceivers) {
         bytes address = receiverArray[i * TokenProto.TOKEN_ADDRESS_LEN: (i + 1) * TokenProto.TOKEN_ADDRESS_LEN];

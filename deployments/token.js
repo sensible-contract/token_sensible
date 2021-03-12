@@ -35,9 +35,9 @@ const rabinPubKey = Rabin.privKeyToPubKey(rabinPrivateKey.p, rabinPrivateKey.q)
 const rabinPubKeyArray = [rabinPubKey, rabinPubKey, rabinPubKey]
 
 const TokenUtil = require('./tokenUtil')
-const utxo1 =  'dee1e526557270de5035204c6198f1e4898cfa5ac830db8a7ec5ecb3c316aca1'
-const outIndex1 = 1
-const bsvBalance1 = 6073362
+const utxo1 =  '5804c8f9ee6b42f8c1e6b7db97b3228658d45a60940afaa82b26549867d18e2d'
+const outIndex1 = 3
+const bsvBalance1 = 6015632
 
 const dustLimit = 546
 
@@ -52,14 +52,10 @@ const decimalNum = 8
 const address1 = privateKey.toAddress()
 const address2 = privateKey2.toAddress()
 
-async function createNewToken() {
+function createNewToken() {
   let outAmount1 = dustLimit + 10000
   let fee = 5000
   let genesisTx = TokenUtil.createGenesis(utxo1, outIndex1, bsv.Script.buildPublicKeyHashOut(address1), bsvBalance1, privateKey, fee, privateKey.publicKey, rabinPubKeyArray, tokenName, tokenSymbol, outAmount1, address1, decimalNum)
-
-  //console.log('createGenesisTx:', genesisTx.id, genesisTx.serialize())
-  //await sendTx(genesisTx)
-  console.log('genesisTx id:', genesisTx.id, genesisTx.serialize().length / 2)
 
   let genesisScript = genesisTx.outputs[0].script
   let inputAmount = genesisTx.outputs[0].satoshis
@@ -103,6 +99,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
   tokenInputArray.push(tokenInput)
 
   let tokenID
+  let tokenCodeHash
   for (let i = 0; i < tokenInputArray.length; i++) {
     const tokenInput = tokenInputArray[i]
     const tokenScript = tokenInput.lockingScript
@@ -112,6 +109,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
     const txId = tokenInput.txId
     const outputIndex = tokenInput.outputIndex
     tokenID = TokenProto.getTokenID(tokenScriptBuf)
+    tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(TokenProto.getContractCode(tokenScriptBuf))
 
     const txidBuf = TokenUtil.getTxIdBuf(txId)
     const indexBuf = TokenUtil.getIndexBuf(outputIndex)
@@ -177,10 +175,8 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
     fee, 
     tokenOutputArray, 
     rabinPubKeyArray,
-    tokenID)
-  //sendTx(scriptTx)
-
-  console.log('checkScriptTx id:', scriptTx.id, scriptTx.serialize().length / 2)
+    tokenID,
+    tokenCodeHash)
 
   outIndex = scriptTx.outputs.length - 1
   bsvBalance = scriptTx.outputs[outIndex].satoshis
@@ -238,21 +234,27 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
   )
 
   //console.log('createTokenTransferTx', tx.id, tx.serialize())
-  return tx
+  const transferTx = tx
+  return {scriptTx, transferTx}
 }
 
 (async() => {
   try {
     TokenUtil.initContractHash(rabinPubKeyArray)
 
-    const {genesisTx, tokenTx} = await createNewToken()
+    const {genesisTx, tokenTx} = createNewToken()
 
+    //await sendTx(genesisTx)
     //await sendTx(tokenTx)
+    console.log('genesisTx id:', genesisTx.id, genesisTx.serialize().length / 2)
     console.log('tokenTx id:', tokenTx.id, tokenTx.serialize().length / 2)
 
     // 1 input token with 3 output token
-    const transferTx = createTokenTransferTx(genesisTx, tokenTx, 1)
+    const {scriptTx, transferTx} = createTokenTransferTx(genesisTx, tokenTx, 1)
+    //await sendTx(scriptTx)
     //await sendTx(transferTx)
+
+    console.log('checkScriptTx id:', scriptTx.id, scriptTx.serialize().length / 2)
     console.log('transferTx id:', transferTx.id, transferTx.serialize().length / 2)
 
   } catch (error) {

@@ -82,16 +82,16 @@ TokenUtil.initContractHash = function(rabinPubKeyArray) {
  * create genesis contract utxo
  * @function createGenesis
  * @param inputTxId {string} the input utxo txid
- * @param inputTxIndex {number} the input utxo output index
+ * @param inputTxIndex {int} the input utxo output index
  * @param inputScript {Object} bsv.Script, the input utxo locking script
- * @param inputAmount {number} the input utxo satoshis
+ * @param inputAmount {int} the input utxo satoshis
  * @param inputPrivKey {Object} bsv.PrivateKey, the input utxo unlocking key 
- * @param fee {number} the tx fee
+ * @param fee {int} the tx fee
  * @param issuerPubKey {Object} bsv.PublicKey, issuer public key used to unlocking genesis contract
  * @param rabinPubKeyArray {BigInt[]} rabin pubkey array
  * @param tokenName {Buffer} the token name
  * @param tokenSymbol {Buffer} the token symbol
- * @param genesisAmount {number} the genesis contract utxo output satoshis
+ * @param genesisAmount {int} the genesis contract utxo output satoshis
  * @param changeAddress {bsv.Address} the change address
  * @param decimalNum {number} the token amount decimal number
 */
@@ -167,25 +167,26 @@ TokenUtil.createGenesis = function(
 /** 
  * create token contract from genesis contract utxo
  * @function createToken
- * @param genesisScript {bsv.Script} the genesis contract locking script
+ * @param genesisScript {Object} bsv.Script, the genesis contract locking script
  * @param tokenValue {number} the token value want to create
- * @param address {bsv.Address} the token create address
+ * @param address {Object} bsv.Address, the token create address
  * @param inputAmount {number} the genesis utxo satoshis
- * @param genesisTxId {Hex String} the genesis utxo id
+ * @param genesisTxId {string} the genesis utxo id
  * @param genesisTxOutputIndex {number} the genesis utxo output index
  * @param outputSatoshis {number} the token output satoshis
- * @param issuerPrivKey {number} the issuer private key to unlock genesis tx
- * @param rabinPubKeyArray {array[int]} rabin pubkey array
- * @param decimalNum {number} token amount decimal num
- * @param bsvInputTxId {hex String} the input utxo txid
- * @param bsvInputTxIndex {number} the input utxo output index
- * @param bsvInputScript {bsv.Script} the input utxo locking script
- * @param bsvInputAmount {number} the input utxo satoshis
- * @param bsvInputPrivKey {bsv.PrivateKey} the input utxo unlocking key 
+ * @param issuerPrivKey {Object} bsv.PrivateKey, the issuer private key to unlock genesis tx
+ * @param rabinPubKeyArray {int[]} rabin pubkey array
+ * @param decimalNum {int} token amount decimal num
+ * @param bsvInputTxId {string} the input utxo txid
+ * @param bsvInputTxIndex {int} the input utxo output index
+ * @param bsvInputScript {Object} bsv.Script, the input utxo locking script
+ * @param bsvInputAmount {int} the input utxo satoshis
+ * @param bsvInputPrivKey {Object} bsv.PrivateKey, the input utxo unlocking key 
  * @param rabinMsg {Buffer} rabin msg of genesis input
- * @param rabinPaddingArray {Array} rabin verify padding of each rabin pubkey
- * @param rabinSigArray {Array} rabin signature of each rabin pubkey
- * @param changeAddress {bsv.Address} the change address
+ * @param rabinPaddingArray {bytes[]} rabin verify padding of each rabin pubkey
+ * @param rabinSigArray {int[]} rabin signature of each rabin pubkey
+ * @param changeAddress {Object} bsv.Address, the change address
+ * @param fee {int} the tx cost fee
 */
 TokenUtil.createToken = function(
   genesisScript, 
@@ -327,6 +328,20 @@ TokenUtil.createToken = function(
   return tx
 }
 
+/** 
+ * create routeCheckAmount contract utxo
+ * @function createRouteCheckTx
+ * @param inputTxId {string} the input bsv utxo txid
+ * @param inputTxIndex {int} the input bsv utxo output index
+ * @param inputScript {Object} bsv.Script, the input bsv utxo locking script
+ * @param inputAmount {int} the input bsv utxo satoshis
+ * @param inputPrivKey {Object} bsv.PrivateKey, the input bsv utxo unlocking key 
+ * @param outputSatoshis {int} the routeCheckAmount contract utxo output satoshis
+ * @param fee {int} the tx fee
+ * @param tokenOutputArray {object[]} the token output array
+ * @param rabinPubKeyArray {BigInt[]} rabin pubkey array
+ * @param tokenID {Buffer} the tokenID
+*/
 TokenUtil.createRouteCheckTx = function(
   inputTxId, 
   inputTxIndex,
@@ -396,17 +411,23 @@ TokenUtil.createRouteCheckTx = function(
 /** 
  * create tx from token transfer
  * @function createTokenTransfer
+ * @param scriptTx {Object} bsv.Transaction, routeCheckAmount contract tx
  * @param tokenInputArray {Array of token input data} token input params, input data: {lockingScript: {bsv.Script}, satoshis: {number}, txId: {hex string}, outputIndex: {number}}
- * @param satoshiInputArray {Array of input data} bsv input params, the input data format is same as token input data
- * @param rabinPubKey {BigInt} rabin public key
- * @param rabinMsgArray {Buffer} concat rabin msg of each token input
- * @param rabinPaddingArray {Buffer} concat rabin verify padding of each token input
- * @param rabinSignArray {Buffer} concat rabin signature of each token input
- * @param senderPrivKeyArray {Array of bsv.PrivateKey} the input token unlocking private keys
- * @param satoshiInputPrivKeyArray {Array of bsv.PrivateKey} the common bsv input unlocking private keys
- * @param tokenOutputArray {Array of token output data} token output params, token output data: {address: {bsv.Address}, tokenAmount: {number}, satoshis: {number}}
+ * @param satoshiInputArray {object[]} bsv input params, the input data format is same as token input data
+ * @param rabinPubKeyArray {BigInt[]} rabin public key array
+ * @param checkRabinMsgArray {Buffer} concat rabin msg of each token input
+ * @param checkRabinPaddingArray {Buffer} concat rabin verify padding of each token input
+ * @param checkRabinSignArray {Buffer} concat rabin signature of each token input
+ * @param senderPrivKeyArray {object[]} Array of bsv.PrivateKey, the input token unlocking private keys
+ * @param satoshiInputPrivKeyArray {object[]} Array of bsv.PrivateKey, the common bsv input unlocking private keys
+ * @param tokenOutputArray {object[]} token output params, token output data: {address: {bsv.Address}, tokenAmount: {number}, satoshis: {number}}
  * @param changeSatoshis {number} change output satoshis
- * @param changeAddress {bsv.Address} change output address
+ * @param changeAddress {object} bsv.Address, change output address
+ * @param tokenRabinMsg {Buffer} rabin msg for token input
+ * @param tokenRabinPaddingArray {Buffer} concat rabin verify padding of each rabin pubkey
+ * @param tokenRabinSignArray {Buffer} concat rabin signature of each rabin pubkey
+ * @param prevPrevTokenAddress {object} bsv.Address, used for rabin msg verify 
+ * @param prevPrevTokenAmount {int} used for rabin msg verify 
 */
 TokenUtil.createTokenTransfer = function(
   scriptTx,
@@ -578,7 +599,7 @@ TokenUtil.createTokenTransfer = function(
       new Bytes(scriptTx.serialize()),
       0,
       tokenOutputLen,
-      prevPrevTokenAddress,
+      new Bytes(prevPrevTokenAddress.hashBuffer.toString('hex')),
       prevPrevTokenAmount
     ).toScript()
     tx.inputs[inIndex].setScript(unlockingScript)
@@ -596,7 +617,7 @@ TokenUtil.createTokenTransfer = function(
 
   // unlock routeCheckAmount
   const routeCheckCode = new RouteCheck(rabinPubKeyArray)
-  console.log('rabinPubKeyArray:', rabinPubKeyArray)
+  //console.log('rabinPubKeyArray:', rabinPubKeyArray)
   let preimage = getPreimage(tx, scriptTx.outputs[0].script.toASM(), scriptTx.outputs[0].satoshis, inputIndex=scriptInputIndex, sighashType=sigtype)
   const unlockingScript = routeCheckCode.unlock(
     new SigHashPreimage(toHex(preimage)),
@@ -613,7 +634,7 @@ TokenUtil.createTokenTransfer = function(
     new Ripemd160(changeAddress.hashBuffer.toString('hex'))
   ).toScript()
   tx.inputs[scriptInputIndex].setScript(unlockingScript)
-  console.log('token check contract args:', toHex(preimage), tokenInputLen, tokenInputArray[0].lockingScript.toBuffer().toString('hex'), prevouts.toString('hex'), checkRabinMsgArray.toString('hex'), checkRabinPaddingArray.toString('hex'), checkRabinSigArray.toString('hex'), inputTokenAddressArray.toString('hex'), inputTokenAmountArray.toString('hex'), outputSatoshiArray.toString('hex'), changeSatoshis, changeAddress.hashBuffer.toString('hex'))
+  //console.log('token check contract args:', toHex(preimage), tokenInputLen, tokenInputArray[0].lockingScript.toBuffer().toString('hex'), prevouts.toString('hex'), checkRabinMsgArray.toString('hex'), checkRabinPaddingArray.toString('hex'), checkRabinSigArray.toString('hex'), inputTokenAddressArray.toString('hex'), inputTokenAmountArray.toString('hex'), outputSatoshiArray.toString('hex'), changeSatoshis, changeAddress.hashBuffer.toString('hex'))
   
   //console.log('createTokenTransferTx: ', tx.serialize())
   return tx

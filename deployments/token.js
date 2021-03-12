@@ -214,7 +214,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
   let padding = new Bytes(Buffer.alloc(rabinSigResult.paddingByteCount, 0).toString('hex'))
   let tokenRabinPaddingArray = [padding, padding, padding]
   // the tokeTx prePrevTx is genesis Tx, so do not need address and amount
-  let prevPrevTokenAddress = new Bytes('00')
+  let prevPrevTokenAddress = address1
   let prevPrevTokenAmount = 0
 
   const tx = TokenUtil.createTokenTransfer(
@@ -252,7 +252,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
 
     // 1 input token with 3 output token
     const transferTx = createTokenTransferTx(genesisTx, tokenTx, 1)
-    await sendTx(transferTx)
+    //await sendTx(transferTx)
     console.log('transferTx id:', transferTx.id, transferTx.serialize().length / 2)
 
   } catch (error) {

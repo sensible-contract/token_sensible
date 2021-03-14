@@ -4,13 +4,13 @@ import "txUtil.scrypt";
 
 struct PayloadU4Data {
   bytes outpoint;
-  int value;
+  int satoshis;
   bytes scriptHash;
 }
 
 struct PayloadU4SpendByData {
   bytes outpoint;
-  int value;
+  int satoshis;
   bytes scriptHash;
   Sha256 byTxId;
 }
@@ -55,7 +55,7 @@ library RabinUtil {
       b''
     };
     self.outpoint = msg[ : 36];
-    self.value = unpack(msg[36 : 44] + b'00');
+    self.satoshis = unpack(msg[36 : 44] + b'00');
     self.scriptHash = msg[44 : ];
 
     return self;
@@ -70,7 +70,7 @@ library RabinUtil {
     };
 
     self.outpoint = msg[ : 36];
-    self.value = unpack(msg[36 : 44] + b'00');
+    self.satoshis = unpack(msg[36 : 44] + b'00');
     self.scriptHash = msg[44 : 64];
     self.byTxId = Sha256(msg[64 : ]);
 
@@ -101,5 +101,37 @@ library RabinUtil {
     }
 
     return matchGenesis;
+  }
+
+  static function verifyOtherInput(
+    int[3] rabinPubKeyArray, 
+    bytes rabinMsg,
+    bytes[3] rabinPaddingArray, 
+    int[3] rabinSigArray,
+    bytes prevouts,
+    int inputIndex,
+    bytes inputScript,
+    PayloadU4Data u4
+    ): bool {
+    int i = 0;
+    int verifyCount = 0;
+    loop(3) {
+      int rabinPubKey = rabinPubKeyArray[i];
+      i += 1;
+      int rabinSig = rabinSigArray[i];
+      bytes padding = rabinPaddingArray[i];
+      int h = RabinUtil.rabinHash(rabinMsg + padding);
+      if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
+        verifyCount += 1;
+      }
+    }
+    require(verifyCount >= 2);
+
+    // verify output point
+    bytes outpoint = prevouts[inputIndex * TxUtil.OUTPOINT_LEN: (inputIndex + 1) * TxUtil.OUTPOINT_LEN];
+    require(u4.outpoint == outpoint);
+
+    require(u4.scriptHash == hash160(inputScript));
+    return true;
   }
 }

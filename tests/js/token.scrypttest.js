@@ -102,7 +102,7 @@ function genContract(name, use_desc) {
 }
 
 function initContract() {
-  const use_desc = true
+  const use_desc = false
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)

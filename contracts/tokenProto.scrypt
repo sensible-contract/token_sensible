@@ -76,6 +76,10 @@ library TokenProto {
     return script[0: slen - TokenProto.DATA_LEN];
   }
 
+  static function getContractCodeHash(bytes script, int slen): bytes {
+    return hash160(TokenProto.getContractCode(script, slen));
+  }
+
   static function genTokenContractFromRawCode(
     bytes tokenCode,
     bytes codeHash,

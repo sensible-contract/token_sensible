@@ -1,4 +1,5 @@
 const proto = require('./protoheader')
+const {bsv} = require('scryptlib')
 
 const token = module.exports
 
@@ -61,7 +62,11 @@ token.getTokenName = function(script) {
 }
 
 token.getContractCode = function(script) {
-  return script.subarray(0, script.length - TOKEN_HEADER_LEN)
+  return script.subarray(0, script.length - TOKEN_HEADER_LEN - 3)
+}
+
+token.getContractCodeHash = function(script) {
+  return bsv.crypto.Hash.sha256ripemd160(token.getContractCode(script))
 }
 
 token.getOracleData = function(script) {

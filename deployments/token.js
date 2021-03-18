@@ -109,7 +109,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
     const txId = tokenInput.txId
     const outputIndex = tokenInput.outputIndex
     tokenID = TokenProto.getTokenID(tokenScriptBuf)
-    tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(TokenProto.getContractCode(tokenScriptBuf))
+    tokenCodeHash = TokenProto.getContractCodeHash(tokenScriptBuf)
 
     const txidBuf = TokenUtil.getTxIdBuf(txId)
     const indexBuf = TokenUtil.getIndexBuf(outputIndex)
@@ -244,15 +244,15 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
 
     const {genesisTx, tokenTx} = createNewToken()
 
-    await sendTx(genesisTx)
-    await sendTx(tokenTx)
+    //await sendTx(genesisTx)
+    //await sendTx(tokenTx)
     console.log('genesisTx id:', genesisTx.id, genesisTx.serialize().length / 2)
     console.log('tokenTx id:', tokenTx.id, tokenTx.serialize().length / 2)
 
     // 1 input token with 3 output token
     const {scriptTx, transferTx} = createTokenTransferTx(genesisTx, tokenTx, 1)
-    await sendTx(scriptTx)
-    await sendTx(transferTx)
+    //await sendTx(scriptTx)
+    //await sendTx(transferTx)
 
     console.log('checkScriptTx id:', scriptTx.id, scriptTx.serialize().length / 2)
     console.log('transferTx id:', transferTx.id, transferTx.serialize().length / 2)

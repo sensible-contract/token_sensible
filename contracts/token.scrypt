@@ -83,8 +83,7 @@ contract Token {
     bytes senderAddress = TokenProto.getTokenAddress(tokenScript, scriptLen);
     bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
 
-    bytes code = TokenProto.getContractCode(tokenScript, scriptLen);
-    bytes tokenCodeHash = hash160(code);
+    bytes tokenCodeHash = TokenProto.getContractCodeHash(tokenScript, scriptLen);
     bytes[3] hashArray = [b'', b'', b''];
 
     if (operation == 1) {

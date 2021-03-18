@@ -73,7 +73,8 @@ library TokenProto {
   }
 
   static function getContractCode(bytes script, int slen): bytes {
-    return script[0: slen - TokenProto.DATA_LEN];
+    // opreturn + 0x76 + len + data
+    return script[0: slen - TokenProto.DATA_LEN - 3];
   }
 
   static function getContractCodeHash(bytes script, int slen): bytes {

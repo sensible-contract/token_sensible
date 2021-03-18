@@ -83,7 +83,6 @@ let tokenCodeHash
 let tokenInstance = []
 let routeCheckInstance
 let unlockContractCheckInstance
-let tokenContract
 
 const maxInputLimit = 3
 const maxOutputLimit = 3
@@ -106,7 +105,7 @@ function initContract() {
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
-  TokenSell = genContract('tokenSell', use_desc)
+  TokenSell = genContract('tokenSell', true)
 }
 
 function initContractHash() {
@@ -123,9 +122,8 @@ function initContractHash() {
   //TODO:
   genesisHash = routeCheckCodeHash
 
-  tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
-  tokenContract.setDataPart(Buffer.alloc(TokenProto.getHeaderLen(), 0).toString('hex'))
-  code = TokenProto.getContractCode(tokenContract.lockingScript.toBuffer())
+  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
+  code = tokenContract.lockingScript.toBuffer()
   tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(code)
 }
 
@@ -665,7 +663,6 @@ describe('Test token contract unlock In Javascript', () => {
   it('should succeed with multi input and output', () => {
     for (let i = 1; i <= 3; i++) {
       for (let j = 1; j <= 3; j++) {
-        //console.log("verify token contract:", i, j)
         verifyTokenContract(i, j, true, true, 0, 0)
       }
     }

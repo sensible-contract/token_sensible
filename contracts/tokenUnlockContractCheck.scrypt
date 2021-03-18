@@ -14,11 +14,12 @@ contract TokenUnlockContractCheck {
     bytes rabinMsgArray,
     bytes rabinPaddingArray,
     bytes rabinSigArray,
+    bytes inputTokenIndexArray,
     bytes inputTokenAddressArray,
     bytes inputTokenAmountArray,
-    bytes receiverSatoshiArray,
     int nOutputs,
     bytes tokenOutputIndexArray,
+    bytes tokenOutputSatoshiArray,
     bytes otherOutputArray
   ) {
 
@@ -33,7 +34,7 @@ contract TokenUnlockContractCheck {
     int tokenScriptLen = len(tokenScript);
     int pos = TokenProto.TOKEN_ID_LEN + 20;
     bytes tokenCodeHash = scriptCode[scriptLen - pos: scriptLen - TokenProto.TOKEN_ID_LEN];
-    require(tokenCodeHash == hash160(TokenProto.getContractCode(tokenScript, tokenScriptLen)));
+    require(tokenCodeHash == TokenProto.getContractCodeHash(tokenScript, tokenScriptLen));
 
     int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
     pos += 1;
@@ -48,7 +49,7 @@ contract TokenUnlockContractCheck {
     int paddingPos = 0;
     require(nSenders <= 8);
     // max support loop num input token
-    loop(10) {
+    loop(8) {
       if (i < nSenders) {
         int pubIndex = 0;
         // verify rabin signature
@@ -73,7 +74,8 @@ contract TokenUnlockContractCheck {
         require(verifyCount >= 2);
 
         PayloadU4Data u4 = RabinUtil.loadPayloadU4(rabinMsg);
-        require(u4.outpoint == prevouts[i * 36: (i + 1) * 36]);
+        int inputIndex = Util.fromLEUnsigned(inputTokenIndexArray[i * 4: (i + 1) * 4]);
+        require(u4.outpoint == prevouts[inputIndex * 36: (inputIndex + 1) * 36]);
 
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
         int amount = Util.fromLEUnsigned(inputTokenAmountArray[i * 8: (i + 1) * 8]);
@@ -98,14 +100,14 @@ contract TokenUnlockContractCheck {
       if (i < nOutputs) {
         int tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[tokenIndex * 4: (tokenIndex + 1) * 4]);
         if (i == tokenOutIndex) {
-          tokenIndex += 1;
           bytes address = receiverArray[tokenIndex * TokenProto.TOKEN_ADDRESS_LEN: (tokenIndex + 1) * TokenProto.TOKEN_ADDRESS_LEN];
-          int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[i * TokenProto.TOKEN_AMOUNT_LEN: (tokenIndex + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
-          sumOutputToken = sumOutputToken + tokenAmount;
+          int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[tokenIndex * TokenProto.TOKEN_AMOUNT_LEN: (tokenIndex + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
+          sumOutputToken += tokenAmount;
           bytes outputScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, tokenAmount);
-          int outputSatoshi = Util.fromLEUnsigned(receiverSatoshiArray[tokenIndex * 8: (tokenIndex + 1) * 8]);
+          int outputSatoshi = Util.fromLEUnsigned(tokenOutputSatoshiArray[tokenIndex * 8: (tokenIndex + 1) * 8]);
           bytes output = Util.buildOutput(outputScript, outputSatoshi);
           outputs = outputs + output;
+          tokenIndex += 1;
         } else {
           int outputLen = Util.fromLEUnsigned(otherOutputArray[otherOutputIndex: otherOutputIndex + 4]);
           bytes output = otherOutputArray[otherOutputIndex + 4: otherOutputIndex + 4 + outputLen];
@@ -116,6 +118,7 @@ contract TokenUnlockContractCheck {
           if (len(scriptCode) == tokenScriptLen) {
             require(TokenProto.getTokenID(scriptCode, tokenScriptLen) != tokenID);
           }
+          otherOutputIndex += 1;
         }
       }
       i = i + 1;

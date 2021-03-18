@@ -32,7 +32,7 @@ contract TokenRouteCheck {
     int tokenScriptLen = len(tokenScript);
     int pos = TokenProto.TOKEN_ID_LEN + 20;
     bytes tokenCodeHash = scriptCode[scriptLen - pos: scriptLen - TokenProto.TOKEN_ID_LEN];
-    require(tokenCodeHash == hash160(TokenProto.getContractCode(tokenScript, tokenScriptLen)));
+    require(tokenCodeHash == TokenProto.getContractCodeHash(tokenScript, tokenScriptLen));
 
     int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
     pos += 1;

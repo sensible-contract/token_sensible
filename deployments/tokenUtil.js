@@ -21,7 +21,7 @@ const TokenProto = require('./tokenProto')
 
 const TokenUtil = module.exports
 
-TokenUtil.RABIN_SIG_LEN = 1024
+TokenUtil.RABIN_SIG_LEN = 128
 
 const genesisFlag = Buffer.from('01', 'hex')
 const nonGenesisFlag = Buffer.from('00', 'hex')
@@ -43,9 +43,28 @@ let routeCheckCodeHashArray
 let unlockContractCodeHashArray
 let genesisHash
 
-TokenUtil.getAmountBuf = function(amount) {
+TokenUtil.getUInt8Buf = function(amount) {
+  const buf = Buffer.alloc(1, 0)
+  buf.writeUInt8(amount)
+  return buf
+
+}
+
+TokenUtil.getUInt16Buf = function(amount) {
+  const buf = Buffer.alloc(2, 0)
+  buf.writeUInt16LE(amount)
+  return buf
+}
+
+TokenUtil.getUInt32Buf = function(index) {
+  const buf = Buffer.alloc(4, 0)
+  buf.writeUInt32LE(index)
+  return buf
+}
+
+TokenUtil.getUInt64Buf = function(amount) {
   const buf = Buffer.alloc(8, 0)
-  buf.writeBigInt64LE(BigInt(amount))
+  buf.writeBigUInt64LE(BigInt(amount))
   return buf
 }
 
@@ -54,15 +73,34 @@ TokenUtil.getTxIdBuf = function(txid) {
   return buf
 }
 
-TokenUtil.getIndexBuf = function(index) {
-  const buf = Buffer.alloc(4, 0)
-  buf.writeUInt32LE(index)
-  return buf
-}
-
 TokenUtil.getScriptHashBuf = function(scriptBuf) {
   const buf = Buffer.from(bsv.crypto.Hash.sha256ripemd160(scriptBuf))
   return buf
+}
+
+TokenUtil.writeVarint = function(buf) {
+
+		const n = buf.length;
+
+    let res = Buffer.alloc(0)
+		if (n < 0xfd) {
+			header = TokenUtil.getUInt8Buf(n);
+		} else if (n < 0x10000) {
+			header = Buffer.concat([Buffer.from('fd', 'hex') , TokenUtil.getUInt16Buf(n)]);
+		} else if (n < 0x100000000) {
+			header = Buffer.concat([Buffer.from('fe', 'hex'), TokenUtil.getUInt32Buf(n)]);
+		} else if (n < 0x10000000000000000) {
+			header = Buffer.concat([Buffer.from('ff', 'hex'), TokenUtil.getUInt64Buf(n)]);
+		}
+
+		return Buffer.concat([header, buf]);
+}
+
+TokenUtil.buildOutput = function(outputScript, outputSatoshis) {
+  return Buffer.concat([
+    TokenUtil.getUInt64Buf(outputSatoshis),
+    TokenUtil.writeVarint(outputScript)
+  ])
 }
 
 TokenUtil.initContractHash = function(rabinPubKeyArray) {
@@ -375,7 +413,7 @@ TokenUtil.createRouteCheckTx = function(
   for (let i =0; i < tokenOutputArray.length; i++) {
     const item = tokenOutputArray[i]
     recervierArray = Buffer.concat([recervierArray, item.address.hashBuffer])
-    const amountBuf = TokenUtil.getAmountBuf(item.tokenAmount)
+    const amountBuf = TokenUtil.getUInt64Buf(item.tokenAmount)
     receiverTokenAmountArray = Buffer.concat([receiverTokenAmountArray, amountBuf])
   }
 
@@ -489,7 +527,7 @@ TokenUtil.createTokenTransfer = function(
     ])
 
     // add outputpoint to prevouts
-    const indexBuf = TokenUtil.getIndexBuf(outputIndex)
+    const indexBuf = TokenUtil.getUInt32Buf(outputIndex)
     const txidBuf = TokenUtil.getTxIdBuf(txId)
 
     prevouts = Buffer.concat([

@@ -642,7 +642,7 @@ function unlockFromContract(scriptHash=null) {
     tokenScriptHash,
     txidBuf,
   ])
-  const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
+  let rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
   const rabinSign = rabinSignResult.signature
   const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
   let rabinPaddingArray = []
@@ -651,7 +651,87 @@ function unlockFromContract(scriptHash=null) {
     rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
     rabinSigArray.push(rabinSign)
   }
+
+  const contractInputIndex = 2
+  const checkPreimage = getPreimage(tx, unlockContractCheckInstance.lockingScript.toASM(), inputSatoshis, inputIndex=contractInputIndex, sighashType=sigtype)
+
+  let inputRabinMsgArray = Buffer.concat([
+    TokenUtil.getTxIdBuf(dummyTxId),
+    TokenUtil.getUInt32Buf(0),
+    TokenUtil.getUInt64Buf(inputSatoshis),
+    Buffer.from(bsv.crypto.Hash.sha256ripemd160(tokenScript.toBuffer()))
+  ])
+  rabinSignResult = sign(inputRabinMsgArray.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
+  let padding = Buffer.concat([
+    TokenUtil.getUInt16Buf(rabinSignResult.paddingByteCount),
+    Buffer.alloc(rabinSignResult.paddingByteCount)
+  ])
+  const inputRabinPaddingArray = Buffer.concat([
+    padding, padding, padding
+  ])
+  const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
+  let inputRabinSignArray = Buffer.concat([
+    sigBuf, sigBuf, sigBuf
+  ])
+
+  let inputTokenIndexArray = TokenUtil.getUInt32Buf(0)
+  let inputTokenAddressArray = TokenProto.getTokenAddress(tokenScript.toBuffer())
+  let inputTokenAmountArray = TokenUtil.getUInt64Buf(TokenProto.getTokenAmount(tokenScript.toBuffer()))
+  let tokenOutputIndexArray = TokenUtil.getUInt32Buf(1) 
+  let tokenOutputSatoshiArray = TokenUtil.getUInt64Buf(inputSatoshis)
+  const outScriptBuf = TokenUtil.buildOutput(bsv.Script.buildPublicKeyHashOut(address1).toBuffer(), sellSatoshis)
+  const outScriptLength = Buffer.alloc(4, 0) 
+  outScriptLength.writeUInt32LE(outScriptBuf.length)
+  const otherOutputArray = Buffer.concat([outScriptLength, outScriptBuf])
+
+  const nTokenInputs = 1
+  const nOutputs = 2
+  const result = unlockContractCheckInstance.unlock(
+    new SigHashPreimage(toHex(checkPreimage)),
+    nTokenInputs,
+    new Bytes(tokenScript.toBuffer().toString('hex')),
+    new Bytes(prevouts.toString('hex')),
+    new Bytes(inputRabinMsgArray.toString('hex')),
+    new Bytes(inputRabinPaddingArray.toString('hex')),
+    new Bytes(inputRabinSignArray.toString('hex')),
+    new Bytes(inputTokenIndexArray.toString('hex')),
+    new Bytes(inputTokenAddressArray.toString('hex')),
+    new Bytes(inputTokenAmountArray.toString('hex')),
+    nOutputs,
+    new Bytes(tokenOutputIndexArray.toString('hex')),
+    new Bytes(tokenOutputSatoshiArray.toString('hex')),
+    new Bytes(otherOutputArray.toString('hex')),
+  ).verify(txContext2)
+  expect(result.success, result.error).to.be.true
+
   return {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray}
+}
+
+function verifyTokenUnlockContractCheck() {
+
+  const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
+  const preimage = getPreimage(tx, unlockContractCheckInstance.lockingScript.toASM(), inputSatoshis, inputIndex=contractInputIndex, sighashType=sigtype)
+
+  const result = unlockContractCheckInstance.unlock(
+    new SigHashPreimage(toHex(preimage)),
+    nTokenInputs,
+    new Bytes(tokenScript.toString('hex')),
+    new Bytes(prevouts.toString('hex')),
+    new Bytes(rabinMsgArray.toString('hex')),
+    new Bytes(rabinPaddingArray.toString('hex')),
+    new Bytes(rabinSignArray.toString('hex')),
+    new Bytes(inputTokenAddressArray.toString('hex')),
+    new Bytes(inputTokenAmountArray.toString('hex')),
+    new Bytes(receiverSatoshiArray.toString('hex')),
+    nOutputs,
+    new Bytes(tokenOutputIndexArray),
+    new Bytes(otherOutputArray),
+  ).verify(txContext)
+  if (expected === true) {
+    expect(result.success, result.error).to.be.true
+  } else {
+    expect(result.success, result.error).to.be.false
+  }
 }
 
 describe('Test token contract unlock In Javascript', () => {

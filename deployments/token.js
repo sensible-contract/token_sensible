@@ -112,8 +112,8 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
     tokenCodeHash = TokenProto.getContractCodeHash(tokenScriptBuf)
 
     const txidBuf = TokenUtil.getTxIdBuf(txId)
-    const indexBuf = TokenUtil.getIndexBuf(outputIndex)
-    const satoBuf = TokenUtil.getAmountBuf(inputSatoshis)
+    const indexBuf = TokenUtil.getUInt32Buf(outputIndex)
+    const satoBuf = TokenUtil.getUInt64Buf(inputSatoshis)
     const rabinMsg = Buffer.concat([
       txidBuf,
       indexBuf,
@@ -199,8 +199,8 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
 
   const tokenRabinMsg = Buffer.concat([
     TokenUtil.getTxIdBuf(genesisTx.id),
-    TokenUtil.getIndexBuf(0),
-    TokenUtil.getAmountBuf(genesisTx.outputs[0].satoshis),
+    TokenUtil.getUInt32Buf(0),
+    TokenUtil.getUInt64Buf(genesisTx.outputs[0].satoshis),
     TokenUtil.getScriptHashBuf(genesisTx.outputs[0].script.toBuffer()),
     TokenUtil.getTxIdBuf(tokenTx.id)
   ])

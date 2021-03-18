@@ -21,7 +21,8 @@ library RabinUtil {
   // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <contractHash(20 bytes)>
   // rabin sig length
   static int U4_RABIN_MSG_LEN = 64;
-  static int RABIN_SIG_LEN = 1024;
+  // 128 bytes, 1024 bits
+  static int RABIN_SIG_LEN = 128;
   static int PADDING_SIZE_LEN = 2;
 
   static function rabinHash(bytes x): int {
@@ -77,7 +78,7 @@ library RabinUtil {
     return self;
   }
 
-  static function verifyInputMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray, bytes thisOutpoint, bytes tokenID, bytes scriptCode, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
+  static function verifyInputMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray, bytes thisOutpoint, bytes tokenID, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
     int verifyCount = RabinUtil.verifyMsgThree(rabinPubKeyArray, rabinMsg, paddingArray, sigArray);
     require(verifyCount > 2);
 
@@ -93,8 +94,8 @@ library RabinUtil {
       if (pl.scriptHash == genesisHash) {
         matchGenesis = true;
       } else {
-        bytes newScriptCode = TokenProto.getNewTokenScript(scriptCode, len(scriptCode), tokenAddress, tokenAmount);
-        if (hash160(newScriptCode) == pl.scriptHash) {
+        bytes newScript = TokenProto.getNewTokenScript(script, len(script), tokenAddress, tokenAmount);
+        if (hash160(newScript) == pl.scriptHash) {
           matchGenesis = true;
         }
       }

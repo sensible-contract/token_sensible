@@ -39,17 +39,9 @@ contract Token {
     int pos = TokenProto.TOKEN_ID_LEN + 20 + 1 + TokenProto.TOKEN_ADDRESS_LEN * nReceivers + TokenProto.TOKEN_AMOUNT_LEN * nReceivers;
 
     // code hash do not count op_return + data length + data
-    if (pos < 75) {
-      pos += 2;
-    } else if (pos < 255) {
-      pos += 3;
-    } else if (pos < 65536) {
-      pos += 4;
-    } else {
-      pos += 6;
-    }
+    int dataOffset = TxUtil.getVarOpLen(pos) + 1 + pos;
 
-    bytes hash = hash160(prevScriptCode[: scriptLen - pos]);
+    bytes hash = hash160(prevScriptCode[: scriptLen - dataOffset]);
 
     return hash == contractCodeHashArray[0] || hash == contractCodeHashArray[1] || hash == contractCodeHashArray[2];
   }

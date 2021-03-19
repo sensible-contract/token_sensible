@@ -32,12 +32,13 @@ library RabinUtil {
     return unpack(sha256(hx[:idx]) + sha256(hx[idx:]) + b'00');
   }
 
-  static function verifyMsgThree(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray): int {
+  static function verifyMsgThree(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[2] paddingArray, int[2] sigArray, int[2] rabinPubKeyIndexArray): int {
     int verifyCount = 0;
     int i = 0;
     int paddingPos = 0;
-    loop(3) {
-      int rabinPubKey = rabinPubKeyArray[i];
+    loop(2) {
+      int pubIndex = rabinPubKeyIndexArray[i];
+      int rabinPubKey = rabinPubKeyArray[pubIndex];
       bytes padding = paddingArray[i];
       int h = RabinUtil.rabinHash(rabinMsg + padding);
       int sig = sigArray[i];
@@ -78,9 +79,9 @@ library RabinUtil {
     return self;
   }
 
-  static function verifyInputMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[3] paddingArray, int[3] sigArray, bytes thisOutpoint, bytes tokenID, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
-    int verifyCount = RabinUtil.verifyMsgThree(rabinPubKeyArray, rabinMsg, paddingArray, sigArray);
-    require(verifyCount > 2);
+  static function verifySelfMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[2] paddingArray, int[2] sigArray, int[2] rabinPubKeyIndexArray, bytes thisOutpoint, bytes tokenID, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
+    int verifyCount = RabinUtil.verifyMsgThree(rabinPubKeyArray, rabinMsg, paddingArray, sigArray, rabinPubKeyIndexArray);
+    require(verifyCount == 2);
 
     PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
 

@@ -358,7 +358,7 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
     ])
     //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
 
-    for (let j = 0; j < 3; j++) {
+    for (let j = 0; j < 2; j++) {
       const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
       const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
       rabinSignArray = Buffer.concat([rabinSignArray, sigBuf])
@@ -403,6 +403,7 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
     new Bytes(rabinMsgArray.toString('hex')),
     new Bytes(rabinPaddingArray.toString('hex')),
     new Bytes(rabinSignArray.toString('hex')),
+    [0, 1],
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(receiverSatoshiArray.toString('hex')),
@@ -501,7 +502,7 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
 
   let rabinPaddingArray = []
   let rabinSigArray = []
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
     rabinSigArray.push(rabinSign)
   }
@@ -512,6 +513,7 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     new Bytes(rabinMsg.toString('hex')),
     rabinPaddingArray,
     rabinSigArray,
+    [0, 1],
     contractInputIndex,
     new Bytes(prevScriptTx.toString('hex')),
     prevScriptOutIndex,
@@ -647,7 +649,7 @@ function unlockFromContract(scriptHash=null) {
   const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
   let rabinPaddingArray = []
   let rabinSigArray = []
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
     rabinSigArray.push(rabinSign)
   }
@@ -694,6 +696,7 @@ function unlockFromContract(scriptHash=null) {
     new Bytes(inputRabinMsgArray.toString('hex')),
     new Bytes(inputRabinPaddingArray.toString('hex')),
     new Bytes(inputRabinSignArray.toString('hex')),
+    [0, 1],
     new Bytes(inputTokenIndexArray.toString('hex')),
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
@@ -720,6 +723,7 @@ function verifyTokenUnlockContractCheck() {
     new Bytes(rabinMsgArray.toString('hex')),
     new Bytes(rabinPaddingArray.toString('hex')),
     new Bytes(rabinSignArray.toString('hex')),
+    [0, 1],
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(receiverSatoshiArray.toString('hex')),
@@ -770,6 +774,7 @@ describe('Test token contract unlock In Javascript', () => {
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
+      [0, 1],
       2,
       new Bytes(checkScriptTx.serialize()),
       0,
@@ -797,6 +802,7 @@ describe('Test token contract unlock In Javascript', () => {
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
+      [0, 1],
       2,
       new Bytes(checkScriptTx.serialize()),
       0,
@@ -824,6 +830,7 @@ describe('Test token contract unlock In Javascript', () => {
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
+      [0, 1],
       2,
       new Bytes(checkScriptTx.serialize()),
       0,

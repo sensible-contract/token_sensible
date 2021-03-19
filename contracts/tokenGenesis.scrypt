@@ -10,8 +10,9 @@ contract TokenGenesis {
     SigHashPreimage txPreimage,
     Sig sig,
     bytes rabinMsg,
-    bytes[3] rabinPaddingArray,
-    int[3] rabinSigArray,
+    bytes[2] rabinPaddingArray,
+    int[2] rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     int genesisSatoshis,
     bytes tokenScript,
     int tokenSatoshis,
@@ -50,8 +51,8 @@ contract TokenGenesis {
     // check the rabin msg
     if (!isFirst) {
       bytes thisOutpoint = Util.outpoint(txPreimage);
-      int verifyCount = RabinUtil.verifyMsgThree(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray);
-      require(verifyCount > 2);
+      int verifyCount = RabinUtil.verifyMsgThree(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray);
+      require(verifyCount == 2);
 
       PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
       require(pl.byTxId == thisOutpoint[ : 32]);

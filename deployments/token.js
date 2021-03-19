@@ -61,8 +61,8 @@ function createNewToken() {
   let inputAmount = genesisTx.outputs[0].satoshis
 
   const rabinMsg = Buffer.alloc(1, 0)
-  const rabinPaddingArray = [new Bytes('00'), new Bytes('00'), new Bytes('00')]
-  const rabinSigArray = [0, 0, 0]
+  const rabinPaddingArray = [new Bytes('00'), new Bytes('00')]
+  const rabinSigArray = [0, 0]
   fee = 10000
   const utxo2 = genesisTx.id
   const outIndex2 = genesisTx.outputs.length - 1
@@ -122,7 +122,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
     ])
     checkRabinMsgArray = Buffer.concat([checkRabinMsgArray, rabinMsg])
 
-    for (let j = 0; j < 3; j++) {
+    for (let j = 0; j < 2; j++) {
       const rabinSignResult = Rabin.sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
       const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
       checkRabinSigArray = Buffer.concat([checkRabinSigArray, sigBuf])
@@ -206,9 +206,9 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex) {
   ])
   let rabinSigResult = Rabin.sign(tokenRabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
   let sig = rabinSigResult.signature
-  let tokenRabinSigArray = [sig, sig, sig]
+  let tokenRabinSigArray = [sig, sig]
   let padding = new Bytes(Buffer.alloc(rabinSigResult.paddingByteCount, 0).toString('hex'))
-  let tokenRabinPaddingArray = [padding, padding, padding]
+  let tokenRabinPaddingArray = [padding, padding]
   // the tokeTx prePrevTx is genesis Tx, so do not need address and amount
   let prevPrevTokenAddress = address1
   let prevPrevTokenAmount = 0

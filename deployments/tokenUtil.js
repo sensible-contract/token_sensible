@@ -38,6 +38,8 @@ const Token = buildContractClass(loadDesc('token_desc.json'))
 const RouteCheck = buildContractClass(loadDesc('tokenRouteCheck_desc.json'))
 const UnlockContractCheck = buildContractClass(loadDesc('tokenUnlockContractCheck_desc.json'))
 
+const rabinPubKeyIndexArray = [0, 1]
+
 let genesisContract
 let routeCheckCodeHashArray
 let unlockContractCodeHashArray
@@ -346,6 +348,7 @@ TokenUtil.createToken = function(
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
+      rabinPubKeyIndexArray,
       genesisOutSatoshis,
       new Bytes(tokenScript.toHex()),
       outputSatoshis,
@@ -634,6 +637,7 @@ TokenUtil.createTokenTransfer = function(
       new Bytes(tokenRabinMsg.toString('hex')),
       tokenRabinPaddingArray,
       tokenRabinSigArray,
+      rabinPubKeyIndexArray,
       scriptInputIndex,
       new Bytes(scriptTx.serialize()),
       0,
@@ -672,6 +676,7 @@ TokenUtil.createTokenTransfer = function(
     new Bytes(checkRabinMsgArray.toString('hex')),
     new Bytes(checkRabinPaddingArray.toString('hex')),
     new Bytes(checkRabinSigArray.toString('hex')),
+    rabinPubKeyIndexArray,
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(outputSatoshiArray.toString('hex')),

@@ -100,8 +100,8 @@ function createToken(oracleData) {
   }
 
   let rabinMsg = Buffer.alloc(1, 0)
-  let rabinPaddingArray = [new Bytes('00'), new Bytes('00'), new Bytes('00')]
-  let rabinSigArray = [0, 0, 0]
+  let rabinPaddingArray = [new Bytes('00'), new Bytes('00')]
+  let rabinSigArray = [0, 0]
 
   result = genesis.unlock(
     new SigHashPreimage(toHex(preimage)), 
@@ -109,6 +109,7 @@ function createToken(oracleData) {
     new Bytes(rabinMsg.toString('hex')),
     rabinPaddingArray,
     rabinSigArray,
+    [0, 1],
     outputAmount,
     new Bytes(lockingScript.toHex()), 
     outputAmount,
@@ -212,7 +213,7 @@ describe('Test genesis contract unlock In Javascript', () => {
     const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
     let rabinPaddingArray = []
     let rabinSigArray = []
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
       rabinSigArray.push(rabinSign)
     }
@@ -236,6 +237,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       new Bytes(rabinMsg.toString('hex')),
       rabinPaddingArray,
       rabinSigArray,
+      [0, 1],
       outputAmount,
       new Bytes(lockingScript.toHex()), 
       outputAmount,

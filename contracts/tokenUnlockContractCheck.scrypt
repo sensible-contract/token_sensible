@@ -14,6 +14,7 @@ contract TokenUnlockContractCheck {
     bytes rabinMsgArray,
     bytes rabinPaddingArray,
     bytes rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     bytes inputTokenIndexArray,
     bytes inputTokenAddressArray,
     bytes inputTokenAmountArray,
@@ -47,17 +48,18 @@ contract TokenUnlockContractCheck {
     int i = 0;
     int sumInputToken = 0;
     int paddingPos = 0;
-    require(nSenders <= 8);
+    require(nSenders <= 3);
     // max support loop num input token
-    loop(8) {
+    loop(3) {
       if (i < nSenders) {
-        int pubIndex = 0;
         // verify rabin signature
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
-        loop(3) {
+        int j = 0;
+        loop(2) {
+          int pubIndex = rabinPubKeyIndexArray[j];
           int rabinPubKey = this.rabinPubKeyArray[pubIndex];
-          int arrayIndex = i * 3 + pubIndex;
+          int arrayIndex = i * 2 + j;
           int rabinSig = Util.fromLEUnsigned(rabinSigArray[arrayIndex * RabinUtil.RABIN_SIG_LEN: (arrayIndex + 1) * RabinUtil.RABIN_SIG_LEN]);
           int paddingLen = Util.fromLEUnsigned(rabinPaddingArray[paddingPos: paddingPos + RabinUtil.PADDING_SIZE_LEN]);
           bytes padding = b'';
@@ -69,9 +71,9 @@ contract TokenUnlockContractCheck {
           if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
             verifyCount += 1;
           }
-          pubIndex += 1;
+          j += 1;
         }
-        require(verifyCount >= 2);
+        require(verifyCount == 2);
 
         PayloadU4Data u4 = RabinUtil.loadPayloadU4(rabinMsg);
         int inputIndex = Util.fromLEUnsigned(inputTokenIndexArray[i * 4: (i + 1) * 4]);
@@ -93,10 +95,10 @@ contract TokenUnlockContractCheck {
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
     i = 0;
     int sumOutputToken = 0;
-    require(nOutputs <= 10);
+    require(nOutputs <= 5);
     int tokenIndex = 0;
     int otherOutputIndex = 0;
-    loop(10) {
+    loop(5) {
       if (i < nOutputs) {
         int tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[tokenIndex * 4: (tokenIndex + 1) * 4]);
         if (i == tokenOutIndex) {

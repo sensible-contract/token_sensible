@@ -51,8 +51,9 @@ contract Token {
     SigHashPreimage txPreimage,
     bytes prevouts,
     bytes rabinMsg,
-    bytes[3] rabinPaddingArray,
-    int[3] rabinSigArray,
+    bytes[2] rabinPaddingArray,
+    int[2] rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     int checkInputIndex,
     bytes checkScriptTx,
     int checkScriptTxOutIndex,
@@ -103,7 +104,7 @@ contract Token {
 
     // verify rabin signature
     bytes thisOutpoint = Util.outpoint(txPreimage);
-    bool res = RabinUtil.verifyInputMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
+    bool res = RabinUtil.verifySelfMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
     res = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, checkScriptTxOutIndex, tokenID, tokenCodeHash, nReceivers);

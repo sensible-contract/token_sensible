@@ -108,8 +108,9 @@ library RabinUtil {
   static function verifyOtherInput(
     int[3] rabinPubKeyArray, 
     bytes rabinMsg,
-    bytes[3] rabinPaddingArray, 
-    int[3] rabinSigArray,
+    bytes[2] rabinPaddingArray, 
+    int[2] rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     bytes prevouts,
     int inputIndex,
     bytes inputScript,
@@ -117,8 +118,9 @@ library RabinUtil {
     ): bool {
     int i = 0;
     int verifyCount = 0;
-    loop(3) {
-      int rabinPubKey = rabinPubKeyArray[i];
+    loop(2) {
+      int pubIndex = rabinPubKeyIndexArray[i];
+      int rabinPubKey = rabinPubKeyArray[pubIndex];
       i += 1;
       int rabinSig = rabinSigArray[i];
       bytes padding = rabinPaddingArray[i];
@@ -127,7 +129,7 @@ library RabinUtil {
         verifyCount += 1;
       }
     }
-    require(verifyCount >= 2);
+    require(verifyCount == 2);
 
     // verify output point
     bytes outpoint = prevouts[inputIndex * TxUtil.OUTPOINT_LEN: (inputIndex + 1) * TxUtil.OUTPOINT_LEN];

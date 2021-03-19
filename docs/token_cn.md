@@ -68,13 +68,16 @@ token合约生成后，需要设置token的data字段。
 
 ### **genesis合约解锁**
 
+合约解锁时，需要传入oracle的签名消息。我们再合约里面设置了3个不同的rabinPubKey，但是只需要2个oracle签名就可以解锁，因此解锁时只需要传入合约里面某2个rabin pubkey对应的签名信息即可。后面的合约rabin解锁方式都做同样的处理。
+
 ```
   public function unlock(
     SigHashPreimage txPreimage,
     Sig sig,
     bytes rabinMsg,
-    bytes[3] rabinPaddingArray,
-    int[3] rabinSigArray,
+    bytes[2] rabinPaddingArray,
+    int[2] rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     int genesisSatoshis,
     bytes tokenScript,
     int tokenSatoshis,
@@ -85,8 +88,9 @@ token合约生成后，需要设置token的data字段。
 >* txPreimage: preimage
 >* sig: 发行者对tx的签名
 >* rabinMsg: 对于此genesis合约的验证消息，如果是第一次生成的genesis合约，则不需要验证，可以随便填写。后面的rabinPaddingArray,rabinSigArray也是一样。
->* rabinPaddingArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的padding
+>* rabinPaddingArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的padding。
 >* rabinSigArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的sig
+>* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
 >* genesisSatoshis: 输出新的genesis合约的satoshis，如果填0，则不会输出新的satoshis合约。
 >* tokenScript: 输出token的lockingScript
 >* tokenSatoshi: 输出token的satoshis
@@ -128,6 +132,7 @@ public function unlock(
     bytes rabinMsgArray,
     bytes rabinPaddingArray,
     bytes rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     bytes inputTokenAddressArray,
     bytes inputTokenAmountArray,
     bytes receiverSatoshiArray,
@@ -142,6 +147,7 @@ public function unlock(
 >* rabinMsgArray：所有输入token的rabin msg array，按照token在tx中的输入顺序排列。
 >* rabinPaddingArray：输入msg的rabin签名padding array。按照token在tx中的顺序排列。<input 0> + <input 1> + ...。其中每个input i是由3个padding所组成，分别是3个rabinPubKey所对应的padding。
 >* rabinSigArray: 输入msg的rabin签名。<input 0> + <input 1> + ...。类似于padding，每个input i也是由3个签名所组成，分别对应3个rabinPubKey。
+>* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
 >* inputTokenAddressArray: 输入token的address array。
 >* inputTokenAmountArray：输入token的amount array。
 >* receiverSatoshiArray：输出token的output satoshis。
@@ -151,13 +157,14 @@ public function unlock(
 ### **token解锁**
 
 ```
-// operation: 1 transfer, 2 unlockFromContract
+  // operation: 1 transfer, 2 unlockFromContract
   public function unlock(
     SigHashPreimage txPreimage,
     bytes prevouts,
     bytes rabinMsg,
-    bytes[3] rabinPaddingArray,
-    int[3] rabinSigArray,
+    bytes[2] rabinPaddingArray,
+    int[2] rabinSigArray,
+    int[2] rabinPubKeyIndexArray,
     int checkInputIndex,
     bytes checkScriptTx,
     int checkScriptTxOutIndex,
@@ -178,6 +185,7 @@ public function unlock(
 >* rabinMsg: 对于自己的utxo的前一个交易的签名消息。
 >* rabinPaddingArray：对于自己的rabin签名padding array。
 >* rabinSigArray： 对于自己的rabin签名。
+>* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
 >* checkInputIndex: routeCheck输入在tx中的input index。
 >* checkScriptTx: 生成routeCheck的raw tx。
 >* checkScriptTxOutIndex：routeCheck在生成tx中的output index。

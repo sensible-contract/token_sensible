@@ -25,6 +25,7 @@ const {
     privateKey,
     privateKey2,
 } = require('../../privateKey');
+const Proto = require('../../deployments/protoheader')
 
 const{ generatePrivKey,
   privKeyToPubKey,
@@ -63,7 +64,7 @@ const genesisFlag = Buffer.from('01', 'hex')
 const nonGenesisFlag = Buffer.from('00', 'hex')
 const tokenType = Buffer.alloc(4, 0)
 tokenType.writeUInt32LE(1)
-const PROTO_FLAG = Buffer.from('oraclesv')
+const PROTO_FLAG = Proto.PROTO_FLAG
 
 const address1 = privateKey.toAddress()
 const address2 = privateKey2.toAddress()

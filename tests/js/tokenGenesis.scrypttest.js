@@ -27,6 +27,7 @@ const{ generatePrivKey,
   sign,
   verify } = require("../../rabin/rabin");
 
+const Proto = require('../../deployments/protoheader')
 const TokenProto = require('../../deployments/tokenProto')
 
 const rabinPrivateKey = {
@@ -48,7 +49,7 @@ const genesisFlag = Buffer.from('01', 'hex')
 const nonGenesisFlag = Buffer.from('00', 'hex')
 const tokenType = Buffer.alloc(4, 0)
 tokenType.writeUInt32LE(1)
-const PROTO_FLAG = Buffer.from('oraclesv')
+const PROTO_FLAG = Proto.PROTO_FLAG
 const Genesis = buildContractClass(compileContract('tokenGenesis.scrypt'))
 const Token = buildContractClass(compileContract('token.scrypt'))
 const address1 = privateKey.toAddress()

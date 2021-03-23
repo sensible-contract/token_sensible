@@ -2,11 +2,11 @@ import "util.scrypt";
 
 library TokenProto {
 
-  // flag is oraclesv
-  static bytes PROTO_FLAG = b'6f7261636c657376';
+  // flag is sensible
+  static bytes PROTO_FLAG = b'73656e7369626c65';
   static int PROTO_TYPE = 1;
   // <type specific data> + <proto header>
-  // <proto header> = <type(4 bytes)> + <'oraclesv'(8 bytes)>
+  // <proto header> = <type(4 bytes)> + <'sensible'(8 bytes)>
   //<token type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimailNum(1 byte)> + <address(20 bytes)> + <token amount(8 bytes)> + <tokenid(20 bytes)>
   static int TOKEN_ID_LEN = 36;
   static int TOKEN_AMOUNT_LEN = 8;

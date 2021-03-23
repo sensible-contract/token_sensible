@@ -1,7 +1,7 @@
 
 const Proto = module.exports
 
-Proto.PROTO_FLAG = Buffer.from('oraclesv')
+Proto.PROTO_FLAG = Buffer.from('sensible')
 
 Proto.PROTO_FLAG_LEN = Proto.PROTO_FLAG.length
 Proto.TYPE_LEN = 4

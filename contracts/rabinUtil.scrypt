@@ -121,13 +121,13 @@ library RabinUtil {
     loop(2) {
       int pubIndex = rabinPubKeyIndexArray[i];
       int rabinPubKey = rabinPubKeyArray[pubIndex];
-      i += 1;
       int rabinSig = rabinSigArray[i];
       bytes padding = rabinPaddingArray[i];
       int h = RabinUtil.rabinHash(rabinMsg + padding);
       if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
         verifyCount += 1;
       }
+      i += 1;
     }
     require(verifyCount == 2);
 

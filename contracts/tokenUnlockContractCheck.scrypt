@@ -48,6 +48,7 @@ contract TokenUnlockContractCheck {
     int i = 0;
     int sumInputToken = 0;
     int paddingPos = 0;
+    require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
     require(nSenders <= 3);
     // max support loop num input token
     loop(3) {

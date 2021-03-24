@@ -21,7 +21,8 @@ contract TokenUnlockContractCheck {
     int nOutputs,
     bytes tokenOutputIndexArray,
     bytes tokenOutputSatoshiArray,
-    bytes otherOutputArray
+    bytes otherOutputArray,
+    bool isBurn
   ) {
 
     require(Tx.checkPreimage(txPreimage));
@@ -99,9 +100,12 @@ contract TokenUnlockContractCheck {
     require(nOutputs <= 5);
     int tokenIndex = 0;
     int otherOutputIndex = 0;
+    int tokenOutIndex = nOutputs + 1;
+    if (nReceivers > 0) {
+      tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[0: 4]);
+    }
     loop(5) {
       if (i < nOutputs) {
-        int tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[tokenIndex * 4: (tokenIndex + 1) * 4]);
         if (i == tokenOutIndex) {
           bytes address = receiverArray[tokenIndex * TokenProto.TOKEN_ADDRESS_LEN: (tokenIndex + 1) * TokenProto.TOKEN_ADDRESS_LEN];
           int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[tokenIndex * TokenProto.TOKEN_AMOUNT_LEN: (tokenIndex + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
@@ -111,6 +115,9 @@ contract TokenUnlockContractCheck {
           bytes output = Util.buildOutput(outputScript, outputSatoshi);
           outputs = outputs + output;
           tokenIndex += 1;
+          if (tokenIndex < nReceivers) {
+            tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[tokenIndex * 4: (tokenIndex + 1) * 4]);
+          }
         } else {
           int outputLen = Util.fromLEUnsigned(otherOutputArray[otherOutputIndex: otherOutputIndex + 4]);
           bytes output = otherOutputArray[otherOutputIndex + 4: otherOutputIndex + 4 + outputLen];
@@ -121,12 +128,15 @@ contract TokenUnlockContractCheck {
           if (len(scriptCode) == tokenScriptLen) {
             require(TokenProto.getTokenID(scriptCode, tokenScriptLen) != tokenID);
           }
-          otherOutputIndex += 1;
         }
       }
       i = i + 1;
     }
-    require(sumInputToken >= sumOutputToken);
+    if (isBurn) {
+      require(sumInputToken >= sumOutputToken);
+    } else {
+      require(sumInputToken == sumOutputToken);
+    }
     bytes hashOutputs = hash256(outputs);
     require(hashOutputs == Util.hashOutputs(txPreimage));
   }

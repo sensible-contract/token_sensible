@@ -670,11 +670,11 @@ function unlockFromContract(scriptHash=null) {
     Buffer.alloc(rabinSignResult.paddingByteCount)
   ])
   const inputRabinPaddingArray = Buffer.concat([
-    padding, padding, padding
+    padding, padding
   ])
   const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
   let inputRabinSignArray = Buffer.concat([
-    sigBuf, sigBuf, sigBuf
+    sigBuf, sigBuf
   ])
 
   let inputTokenIndexArray = TokenUtil.getUInt32Buf(0)
@@ -705,6 +705,7 @@ function unlockFromContract(scriptHash=null) {
     new Bytes(tokenOutputIndexArray.toString('hex')),
     new Bytes(tokenOutputSatoshiArray.toString('hex')),
     new Bytes(otherOutputArray.toString('hex')),
+    false
   ).verify(txContext2)
   expect(result.success, result.error).to.be.true
 

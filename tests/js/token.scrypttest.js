@@ -32,7 +32,6 @@ const{ generatePrivKey,
   sign,
   verify } = require("../../rabin/rabin");
 
-
 //const rabinPrivateKey = generatePrivKey()
 const rabinPrivateKey = {
   "p": 5757440790098238249206056886132360783939976756626308615141839695681752813612764520921497694519841722889028334119917789649651692480869415368298368200263n,
@@ -40,7 +39,7 @@ const rabinPrivateKey = {
 }
 const rabinPubKey = privKeyToPubKey(rabinPrivateKey.p, rabinPrivateKey.q)
 const rabinPubKeyArray = [rabinPubKey, rabinPubKey, rabinPubKey]
-console.log('rabin key pair:', rabinPrivateKey, rabinPubKey)
+//console.log('rabin key pair:', rabinPrivateKey, rabinPubKey)
 
 const TokenProto = require('../../deployments/tokenProto')
 const TokenUtil = require('../../deployments/tokenUtil')
@@ -51,7 +50,6 @@ const OP_UNLOCK_FROM_CONTRACT = 2
 // make a copy since it will be mutated
 let tx
 let prevScriptTx
-let contractInputIndex
 const prevScriptOutIndex = 0
 const outputToken1 = 100
 
@@ -102,7 +100,7 @@ function genContract(name, use_desc) {
 }
 
 function initContract() {
-  const use_desc = false
+  const use_desc = true
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
@@ -128,6 +126,23 @@ function initContractHash() {
   tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(code)
 }
 
+function createTokenContract(addressBuf, amount) {
+  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
+  const data = Buffer.concat([
+    tokenName,
+    tokenSymbol,
+    nonGenesisFlag, 
+    decimalNum,
+    addressBuf,
+    TokenUtil.getUInt64Buf(amount),
+    Buffer.from(tokenID, 'hex'),
+    tokenType, // type
+    PROTO_FLAG
+  ])
+  token.setDataPart(data.toString('hex'))
+  return token
+}
+
 function genReceiverData(nOutputs, outputTokenArray) {
   let recervierArray = Buffer.alloc(0)
   let receiverTokenAmountArray = Buffer.alloc(0)
@@ -142,34 +157,6 @@ function genReceiverData(nOutputs, outputTokenArray) {
     receiverSatoshiArray = Buffer.concat([receiverSatoshiArray, satoshiBuf])
   }
   return {recervierArray, receiverTokenAmountArray, receiverSatoshiArray}
-}
-
-function genRouteCheckTx(nOutputs, outputTokenArray) {
-  const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nOutputs, outputTokenArray)
-  prevScriptTx = new bsv.Transaction()
-  prevScriptTx.addInput(new bsv.Transaction.Input({
-    prevTxId: dummyTxId,
-    outputIndex: 0,
-    script: ''
-  }), bsv.Script.buildPublicKeyHashOut(address1), inputSatoshis)
-  const nReceiverBuf = Buffer.alloc(1, 0)
-  nReceiverBuf.writeUInt8(nOutputs)
-  const routeCheck = new RouteCheck(rabinPubKeyArray)
-  const data = Buffer.concat([
-    receiverTokenAmountArray,
-    recervierArray,
-    nReceiverBuf,
-    tokenCodeHash,
-    tokenID,
-  ])
-  routeCheck.setDataPart(data.toString('hex'))
-  const routeCheckScript = routeCheck.lockingScript
-  prevScriptTx.addOutput(new bsv.Transaction.Output({
-    script: routeCheckScript,
-    satoshis: inputSatoshis
-  }))
-  routeCheckInstance = routeCheck
-  return prevScriptTx
 }
 
 function genUnlockContractCheckTx(nOutputs, outputTokenArray) {
@@ -200,118 +187,78 @@ function genUnlockContractCheckTx(nOutputs, outputTokenArray) {
   return prevScriptTx
 }
 
-function addInputTokens(nTokenInput, nSatoshiInput, nTokenOutputs, outputTokenAdd) {
-
-  tx = new bsv.Transaction()
-
-  let sumInputTokens = 0
-  tokenInstance = []
-  for (let i = 0; i < nTokenInput; i++) {
-    const bufValue = Buffer.alloc(8, 0)
-    bufValue.writeBigUInt64LE(BigInt(outputToken1 + i))
-    sumInputTokens += outputToken1 + i
-    const oracleData = Buffer.concat([
-      tokenName,
-      tokenSymbol,
-      nonGenesisFlag,
-      decimalNum,
-      address1.hashBuffer, // contract script hash
-      bufValue, // token amount
-      tokenID, 
-      tokenType, // type
-      PROTO_FLAG
-      ])
-
-    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
-    token.setDataPart(oracleData.toString('hex'))
-    tokenInstance.push(token)
-    const tokenScript = token.lockingScript
-    tx.addInput(new bsv.Transaction.Input({
-      prevTxId: dummyTxId,
-      outputIndex: i,
-      script: ''
-      }), tokenScript, inputSatoshis)
+function addInput(tx, lockingScript, i, prevouts, prevTxId=null) {
+  if (prevTxId === null) {
+    prevTxId = dummyTxId
   }
-
-  for (let i = 0; i < nSatoshiInput; i++) {
-    tx.addInput(new bsv.Transaction.Input({
-      prevTxId: dummyTxId,
-      outputIndex: i + nTokenInput,
-      script: ''
-    }), bsv.Script.buildPublicKeyHashOut(address1), inputSatoshis)
-  }
-
-  sumInputTokens += outputTokenAdd
-  let outputTokenArray = []
-  for (let i = 0; i < nTokenOutputs; i++) {
-    const bufValue = Buffer.alloc(8, 0)
-    if (i == nTokenOutputs - 1) {
-      //console.log('output token', i, sumInputTokens)
-      bufValue.writeBigUInt64LE(BigInt(sumInputTokens))
-      outputTokenArray.push(sumInputTokens)
-    } else {
-      //console.log('output token', i, i + 1)
-      bufValue.writeBigUInt64LE(BigInt(i + 1))
-      sumInputTokens -= i + 1
-      outputTokenArray.push(i + 1)
-    }
-  }
-
-  const prevScriptTx = genRouteCheckTx(nTokenOutputs, outputTokenArray)
-  const prevScriptTxId = prevScriptTx.id
-
-  contractInputIndex = nTokenInput + nSatoshiInput
   tx.addInput(new bsv.Transaction.Input({
-    prevTxId: prevScriptTxId,
-    outputIndex: 0,
+    prevTxId: prevTxId,
+    outputIndex: i,
     script: ''
-    }), prevScriptTx.outputs[0].script, inputSatoshis)
-
-  return outputTokenArray
+  }), lockingScript, inputSatoshis)
+  prevouts.push(TokenUtil.getTxIdBuf(prevTxId))
+  prevouts.push(TokenUtil.getUInt32Buf(i))
 }
 
-function addOutputTokens(nOutputToken, outputTokenArray, changeSatoshi) {
-  //console.log('addOutputTokens:', nOutputToken, sumInputTokens, changeSatoshi)
-  for (let i = 0; i < nOutputToken; i++) {
-    const bufValue = Buffer.alloc(8, 0)
-    bufValue.writeBigUInt64LE(BigInt(outputTokenArray[i]))
-    const oracleData = Buffer.concat([
-      tokenName,
-      tokenSymbol,
-      nonGenesisFlag,
-      decimalNum,
-      address2.hashBuffer, // contract script hash
-      bufValue, // token value
-      tokenID, // script code hash
-      tokenType, // type
-      PROTO_FLAG
-      ])
-    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
-    //token.replaceAsmVars(asmVars)
-    token.setDataPart(oracleData.toString('hex'))
-    tx.addOutput(new bsv.Transaction.Output({
-      script: token.lockingScript,
-      satoshis: inputSatoshis
-    }))
-    //console.log('output script:', address2.hashBuffer.toString('hex'), token.lockingScript.toBuffer().toString('hex'), oracleData.toString('hex'))
-  }
-
-  if (changeSatoshi > 0) {
-    const lockingScript = bsv.Script.buildPublicKeyHashOut(address1)
-    tx.addOutput(new bsv.Transaction.Output({
-      script: lockingScript,
-      satoshis: changeSatoshi 
-    }))
-    //console.log('changeSatoshi', changeSatoshi, lockingScript.toBuffer().toString('hex'))
-  }
-  return outputTokenArray
+function addOutput(tx, lockingScript, outputSatoshis=inputSatoshis) {
+  tx.addOutput(new bsv.Transaction.Output({
+    script: lockingScript,
+    satoshis: outputSatoshis
+  }))
 }
 
-function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, changeSatoshi, expected) {
+function createRabinMsg(txid, outputIndex, satoshis, scriptBuf, spendByTxId=null) {
+  const scriptHash = bsv.crypto.Hash.sha256ripemd160(scriptBuf)
+  let rabinMsg = Buffer.concat([
+    TokenUtil.getTxIdBuf(txid),
+    TokenUtil.getUInt32Buf(outputIndex),
+    TokenUtil.getUInt64Buf(satoshis),
+    scriptHash
+  ])
+  if (spendByTxId !== null) {
+    rabinMsg = Buffer.concat([rabinMsg, TokenUtil.getTxIdBuf(spendByTxId)])
+  }
+  let rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
+  const rabinSign = rabinSignResult.signature
+  const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
+  let rabinPaddingArray = []
+  let rabinSigArray = []
+  for (let i = 0; i < 2; i++) {
+    rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
+    rabinSigArray.push(rabinSign)
+  }
+  return [rabinMsg, rabinPaddingArray, rabinSigArray]
+}
+
+function createRouteCheckContract(nOutputs, outputTokenArray) {
+  const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nOutputs, outputTokenArray)
+  const tx = new bsv.Transaction()
+  addInput(tx, bsv.Script.buildPublicKeyHashOut(address1), 0, [])
+
+  const nReceiverBuf = TokenUtil.getUInt8Buf(nOutputs)
+  const routeCheck = new RouteCheck(rabinPubKeyArray)
+  const data = Buffer.concat([
+    receiverTokenAmountArray,
+    recervierArray,
+    nReceiverBuf,
+    tokenCodeHash,
+    tokenID,
+  ])
+  routeCheck.setDataPart(data.toString('hex'))
+  const routeCheckScript = routeCheck.lockingScript
+  tx.addOutput(new bsv.Transaction.Output({
+    script: routeCheckScript,
+    satoshis: inputSatoshis
+  }))
+  routeCheckInstance = routeCheck
+  return [routeCheck, tx]
+}
+
+function verifyRouteCheck(tx, prevouts, tokenInstance, nTokenInput, nSatoshiInput, receiverSatoshiArray, changeSatoshi, inputIndex, expected) {
 
   const txContext = { 
     tx: tx, 
-    inputIndex: contractInputIndex, 
+    inputIndex: inputIndex, 
     inputSatoshis: inputSatoshis 
   }
 
@@ -320,17 +267,11 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
   let rabinPaddingArray = Buffer.alloc(0)
   let inputTokenAddressArray = Buffer.alloc(0)
   let inputTokenAmountArray = Buffer.alloc(0)
-  let prevouts = Buffer.alloc(0)
   let tokenScript
-  for (let i = 0; i < nTokenInputs; i++) {
+  for (let i = 0; i < nTokenInput; i++) {
     const indexBuf = Buffer.alloc(4, 0)
     indexBuf.writeUInt32LE(i)
     const txidBuf = Buffer.from([...Buffer.from(dummyTxId, 'hex')].reverse())
-    prevouts = Buffer.concat([
-      prevouts,
-      txidBuf,
-      indexBuf
-    ])
 
     const token = tokenInstance[i]
     tokenScript = token.lockingScript.toBuffer()
@@ -374,31 +315,12 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
     }
   }
 
-  for (let i = 0; i < nSatoshiInput; i++) {
-    const indexBuf = Buffer.alloc(4, 0)
-    indexBuf.writeUInt32LE(i + nTokenInputs)
-    const txidBuf = Buffer.from([...Buffer.from(dummyTxId, 'hex')].reverse())
-    prevouts = Buffer.concat([
-      prevouts,
-      txidBuf,
-      indexBuf
-    ])
-  }
-
-  const indexBuf = Buffer.alloc(4, 0)
-  indexBuf.writeUInt32LE(prevScriptOutIndex)
-  prevouts = Buffer.concat([
-    prevouts,
-    Buffer.from([...Buffer.from(prevScriptTx.id, 'hex')].reverse()),
-    indexBuf
-  ])
-
   const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
-  const preimage = getPreimage(tx, routeCheckInstance.lockingScript.toASM(), inputSatoshis, inputIndex=contractInputIndex, sighashType=sigtype)
+  const preimage = getPreimage(tx, routeCheckInstance.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
 
   const result = routeCheckInstance.unlock(
     new SigHashPreimage(toHex(preimage)),
-    nTokenInputs,
+    nTokenInput,
     new Bytes(tokenScript.toString('hex')),
     new Bytes(prevouts.toString('hex')),
     new Bytes(rabinMsgArray.toString('hex')),
@@ -418,22 +340,67 @@ function verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, cha
   }
 }
 
-function verifyTokenContract(nTokenInputs, nOutputs, expectedToken, expectedCheck, nSatoshiInput=0, changeSatoshi=0, outputTokenAdd=0) {
-  const outputTokenArray = addInputTokens(nTokenInputs, nSatoshiInput, nOutputs, outputTokenAdd)
-  addOutputTokens(nOutputs, outputTokenArray, changeSatoshi)
-  //console.log('outputTokenArray:', outputTokenArray)
-  for (let i = 0; i < nTokenInputs; i++) {
-    verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatoshiInput, i, expectedToken)
+function verifyTokenContract(nTokenInput, nTokenOutputs, expectedToken, expectedCheck, nSatoshiInput=0, changeSatoshi=0, outputTokenAdd=0) {
+  const tx =  new bsv.Transaction()
+  let prevouts = []
+
+  let sumInputTokens = 0
+  let tokenInstance = []
+  let tokenScriptBuf
+  // add token input
+  for (let i = 0; i < nTokenInput; i++) {
+    const token = createTokenContract(address1.hashBuffer, outputToken1 + i)
+    tokenInstance.push(token)
+    tokenScriptBuf = token.lockingScript.toBuffer()
+    sumInputTokens += outputToken1 + i
+    addInput(tx, token.lockingScript, i, prevouts)
   }
 
-  const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nOutputs, outputTokenArray)
-  verifyRouteCheck(nTokenInputs, nSatoshiInput, receiverSatoshiArray, changeSatoshi, expectedCheck)
+  // add bsv input
+  for (let i = 0; i < nSatoshiInput; i++) {
+    addInput(tx, bsv.Script.buildPublicKeyHashOut(address1), i + nTokenInput, prevouts)
+  }
+
+  sumInputTokens += outputTokenAdd
+  let outputTokenArray = []
+  for (let i = 0; i < nTokenOutputs; i++) {
+    if (i == nTokenOutputs - 1) {
+      outputTokenArray.push(sumInputTokens)
+    } else {
+      sumInputTokens -= i + 1
+      outputTokenArray.push(i + 1)
+    }
+  }
+
+  // add tokenRouteCheckContract
+  const [routeCheck, routeCheckTx] = createRouteCheckContract(nTokenOutputs, outputTokenArray)
+  const contractInputIndex = nTokenInput + nSatoshiInput
+  addInput(tx, routeCheck.lockingScript, contractInputIndex, prevouts, prevTxId=routeCheckTx.id)
+
+  prevouts = Buffer.concat(prevouts)
+
+  // output
+  for (let i = 0; i < nTokenOutputs; i++) {
+    const scriptBuf = TokenProto.getNewTokenScript(tokenScriptBuf, address2.hashBuffer, outputTokenArray[i])
+    addOutput(tx, bsv.Script.fromBuffer(scriptBuf))
+  }
+
+  if (changeSatoshi > 0) {
+    addOutput(tx, bsv.Script.buildPublicKeyHashOut(address1), changeSatoshi)
+  }
+
+  //console.log('outputTokenArray:', outputTokenArray)
+  for (let i = 0; i < nTokenInput; i++) {
+    verifyOneTokenContract(tx, prevouts, tokenInstance[i], nTokenOutputs, i, contractInputIndex, routeCheckTx, 0, expectedToken)
+  }
+
+  const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nTokenOutputs, outputTokenArray)
+  verifyRouteCheck(tx, prevouts, tokenInstance, nTokenInput, nSatoshiInput, receiverSatoshiArray, changeSatoshi, contractInputIndex, expectedCheck)
 }
 
-function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatoshiInput, inputIndex, expected) {
+function verifyOneTokenContract(tx, prevouts, token, nOutputs, inputIndex, contractInputIndex, contractTx, contractTxOutputIndex, expected) {
   //console.log('verifyOneTokenContract:', inputIndex, expected)
   const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
-  const token = tokenInstance[inputIndex]
   const preimage = getPreimage(tx, token.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
   const sig = signTx(tx, privateKey, token.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
 
@@ -443,70 +410,10 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     inputSatoshis: inputSatoshis 
   }
 
-  let rabinMsg
-  let rabinSign
-  let rabinPadding
-  let prevouts = Buffer.alloc(0)
-  let prevTokenAddress
-  let prevTokenAmount
-  for (let i = 0; i < nTokenInputs; i++) {
-    const indexBuf = Buffer.alloc(4, 0)
-    indexBuf.writeUInt32LE(i)
-    const txidBuf = Buffer.from([...Buffer.from(dummyTxId, 'hex')].reverse())
-    prevouts = Buffer.concat([
-      prevouts,
-      txidBuf,
-      indexBuf
-    ])
-
-    if (i == inputIndex) {
-      const scriptBuf = token.lockingScript.toBuffer()
-      const scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(scriptBuf))
-      prevTokenAddress = TokenProto.getTokenAddress(scriptBuf)
-      prevTokenAmount = TokenProto.getTokenAmount(scriptBuf)
-      const bufValue = Buffer.alloc(8, 0)
-      bufValue.writeBigUInt64LE(BigInt(outputToken1 + i))
-      const satoshiBuf = Buffer.alloc(8, 0)
-      satoshiBuf.writeBigUInt64LE(BigInt(inputSatoshis))
-      rabinMsg = Buffer.concat([
-        txidBuf,
-        indexBuf,
-        satoshiBuf,
-        scriptHash,
-        txidBuf,
-      ])
-      const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
-      //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
-      rabinSign = rabinSignResult.signature
-      rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
-    }
-  }
-
-  for (let i = 0; i < nSatoshiInput; i++) {
-    const indexBuf = Buffer.alloc(4, 0)
-    indexBuf.writeUInt32LE(i + nTokenInputs)
-    const txidBuf = Buffer.from([...Buffer.from(dummyTxId, 'hex')].reverse())
-    prevouts = Buffer.concat([
-      prevouts,
-      txidBuf,
-      indexBuf
-    ])
-  }
-
-  const indexBuf = Buffer.alloc(4, 0)
-  indexBuf.writeUInt32LE(prevScriptOutIndex)
-  prevouts = Buffer.concat([
-    prevouts,
-    Buffer.from([...Buffer.from(prevScriptTx.id, 'hex')].reverse()),
-    indexBuf
-  ])
-
-  let rabinPaddingArray = []
-  let rabinSigArray = []
-  for (let i = 0; i < 2; i++) {
-    rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
-    rabinSigArray.push(rabinSign)
-  }
+  const scriptBuf = token.lockingScript.toBuffer()
+  let prevTokenAddress = TokenProto.getTokenAddress(scriptBuf)
+  let prevTokenAmount = TokenProto.getTokenAmount(scriptBuf)
+  const [rabinMsg, rabinPaddingArray, rabinSigArray] = createRabinMsg(dummyTxId, inputIndex, inputSatoshis, scriptBuf, dummyTxId)
 
   const result = token.unlock(
     new SigHashPreimage(toHex(preimage)),
@@ -516,8 +423,8 @@ function verifyOneTokenContract(outputTokenArray, nTokenInputs, nOutputs, nSatos
     rabinSigArray,
     [0, 1],
     contractInputIndex,
-    new Bytes(prevScriptTx.toString('hex')),
-    prevScriptOutIndex,
+    new Bytes(contractTx.toString('hex')),
+    contractTxOutputIndex,
     nOutputs,
     new Bytes(prevTokenAddress.toString('hex')),
     prevTokenAmount,
@@ -687,11 +594,11 @@ function unlockFromContract(scriptHash=null) {
   outScriptLength.writeUInt32LE(outScriptBuf.length)
   const otherOutputArray = Buffer.concat([outScriptLength, outScriptBuf])
 
-  const nTokenInputs = 1
+  const nTokenInput = 1
   const nOutputs = 2
   const result = unlockContractCheckInstance.unlock(
     new SigHashPreimage(toHex(checkPreimage)),
-    nTokenInputs,
+    nTokenInput,
     new Bytes(tokenScript.toBuffer().toString('hex')),
     new Bytes(prevouts.toString('hex')),
     new Bytes(inputRabinMsgArray.toString('hex')),
@@ -710,34 +617,6 @@ function unlockFromContract(scriptHash=null) {
   expect(result.success, result.error).to.be.true
 
   return {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray}
-}
-
-function verifyTokenUnlockContractCheck() {
-
-  const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
-  const preimage = getPreimage(tx, unlockContractCheckInstance.lockingScript.toASM(), inputSatoshis, inputIndex=contractInputIndex, sighashType=sigtype)
-
-  const result = unlockContractCheckInstance.unlock(
-    new SigHashPreimage(toHex(preimage)),
-    nTokenInputs,
-    new Bytes(tokenScript.toString('hex')),
-    new Bytes(prevouts.toString('hex')),
-    new Bytes(rabinMsgArray.toString('hex')),
-    new Bytes(rabinPaddingArray.toString('hex')),
-    new Bytes(rabinSignArray.toString('hex')),
-    [0, 1],
-    new Bytes(inputTokenAddressArray.toString('hex')),
-    new Bytes(inputTokenAmountArray.toString('hex')),
-    new Bytes(receiverSatoshiArray.toString('hex')),
-    nOutputs,
-    new Bytes(tokenOutputIndexArray),
-    new Bytes(otherOutputArray),
-  ).verify(txContext)
-  if (expected === true) {
-    expect(result.success, result.error).to.be.true
-  } else {
-    expect(result.success, result.error).to.be.false
-  }
 }
 
 describe('Test token contract unlock In Javascript', () => {
@@ -849,6 +728,34 @@ describe('Test token contract unlock In Javascript', () => {
     expect(result.success, result.error).to.be.false
   });
 
+  it('it should failed when pass same rabinPubKey index', () => {
+    // create the contract tx
+    const {token, preimage, prevouts, prevTx, txContext, checkScriptTx, txContext2, rabinMsg, rabinPaddingArray, rabinSigArray} = unlockFromContract()
+    const prevTokenAddress = new Bytes(address1.hashBuffer.toString('hex'))
+    const prevTokenAmount = 0
+    const result = token.unlock(
+      new SigHashPreimage(toHex(preimage)),
+      new Bytes(prevouts.toString('hex')),
+      new Bytes(rabinMsg.toString('hex')),
+      rabinPaddingArray,
+      rabinSigArray,
+      [1, 1],
+      2,
+      new Bytes(checkScriptTx.serialize()),
+      0,
+      1,
+      prevTokenAddress,
+      prevTokenAmount,
+      new PubKey('00'),
+      new Sig('00'),
+      1,
+      new Bytes(prevTx.serialize()),
+      0,
+      OP_UNLOCK_FROM_CONTRACT
+    ).verify(txContext)
+    expect(result.success, result.error).to.be.false
+  });
+
   it('should failed because token input is greater than maxInputLimit', () => {
     verifyTokenContract(maxInputLimit + 1, 1, true, false, 0, 0)
   });
@@ -857,7 +764,11 @@ describe('Test token contract unlock In Javascript', () => {
     verifyTokenContract(1, maxOutputLimit + 1, true, false, 0, 0)
   });
 
-  it('should failed because input output token amount donot match', () => {
-    verifyTokenContract(1, 1, true, false, 0, 0, outputTokenAdd=1)
+  it('should failed because input amount is greater then output amount', () => {
+    verifyTokenContract(1, 1, true, false, 0, 0, outputTokenAdd=100)
+  });
+
+  it('should failed because input amount is less than output amount', () => {
+    verifyTokenContract(1, 1, true, false, 0, 0, outputTokenAdd=-100)
   });
 });

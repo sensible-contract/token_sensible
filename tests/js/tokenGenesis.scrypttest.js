@@ -277,6 +277,22 @@ describe('Test genesis contract unlock In Javascript', () => {
     result = createToken(oracleData2)
     expect(result.success, result.error).to.be.false
   });
+  it('should failed when add wrong data length', () => {
+    const oracleData = Buffer.concat([
+      Buffer.alloc(0),
+      tokenName,
+      Buffer.alloc(tokenSymbol.length, 0),
+      nonGenesisFlag, 
+      decimalNum,
+      address1.hashBuffer, // address
+      buffValue, // token value
+      tokenID, // script code hash
+      tokenType, // type
+      PROTO_FLAG
+    ])
+    let result = createToken(oracleData)
+    expect(result.success, result.error).to.be.false
+  })
 
   it('should failed when get wrong tokenSymbol', () => {
     const oracleData = Buffer.concat([

@@ -1,4 +1,5 @@
 import "util.scrypt";
+import "txUtil.scrypt";
 
 library TokenProto {
 
@@ -70,6 +71,14 @@ library TokenProto {
 
   static function getTokenName(bytes script, int slen): bytes {
     return script[slen - TokenProto.TOKEN_NAME_OFFSET: slen - TokenProto.TOKEN_NAME_OFFSET + TokenProto.TOKEN_NAME_LEN];
+  }
+
+  static function checkDataLen(bytes script, int slen): bool {
+    return unpack(script[slen - TokenProto.DATA_LEN - 1: slen - TokenProto.DATA_LEN] + b'00') == TokenProto.DATA_LEN;
+  }
+
+  static function checkOpReturn(bytes script, int slen): bool {
+    return unpack(script[slen - TokenProto.DATA_LEN - 3: slen - TokenProto.DATA_LEN - 2] + b'00') == 0x6a;
   }
 
   static function getContractCode(bytes script, int slen): bytes {

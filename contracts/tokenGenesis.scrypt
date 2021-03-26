@@ -47,6 +47,9 @@ contract TokenGenesis {
     require(protoType == TokenProto.PROTO_TYPE);
     bytes flag = TokenProto.getProtoFlag(genesisScript, dataLen);
     require(flag == TokenProto.PROTO_FLAG);
+    // check opreturn
+    require(TokenProto.checkDataLen(genesisScript, dataLen));
+    require(TokenProto.checkOpReturn(genesisScript, dataLen));
 
     // check the rabin msg
     if (!isFirst) {
@@ -70,6 +73,9 @@ contract TokenGenesis {
     protoType = TokenProto.getProtoType(tokenScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
     require(TokenProto.PROTO_FLAG == TokenProto.getProtoFlag(tokenScript, dataLen));
+    // check opreturn
+    require(TokenProto.checkDataLen(tokenScript, dataLen));
+    require(TokenProto.checkOpReturn(tokenScript, dataLen));
 
     bytes genesisOutput = b'';
     if (genesisSatoshis > 0) {

@@ -34,6 +34,13 @@ token的数据格式定义
 >* Token amount是一个8字节的小端存储的unsigned int, 代表token的数量。 
 >* TokenID长度为36字节，是第一次生成的genesis utxo的outputpoint。用来标识不同的token。
 
+### **Rabin Msg 格式**
+
+rabin的签名方式可以参见[satotx](https://github.com/sensing-contract/satotx)。其中签名消息有两种格式：
+
+>* 1. [对“某UTXO”签名](https://github.com/sensing-contract/satotx#1-%E5%AF%B9%E6%9F%90utxo%E7%AD%BE%E5%90%8D)
+>* 2. [对“某UTXO被下一个Tx花费”签名](https://github.com/sensing-contract/satotx#2-%E5%AF%B9%E6%9F%90utxo%E8%A2%AB%E4%B8%8B%E4%B8%80%E4%B8%AAtx%E8%8A%B1%E8%B4%B9%E7%AD%BE%E5%90%8D)
+
 ### **1.2 创建Genesis Tx**
 
 ![image](imgs/genesis_tx.png)
@@ -54,8 +61,8 @@ contract Token {
 ```
 
 >* rabinPubkeyArray，与genesis合约里面用的参数一样。
->* routeContractCodeHashArray: 一个合约代码hash的数组，routeContract是用来转账时对输入输出的token数量进行检查。这里支持3种不同的合约，可以对于不同的输入输出使用不同的检查脚本，比如3输入3输入，10输入5输出， 30输入15输出三种合约，在合约转账时可以根据具体的需求，来选择生成不同的合约，能够灵活支持大规模的转账，同时控制token合约的size。
->* unlockContractCodeHashArray: 类似与routeContractCodeHashArray, 是在unlockFromContract时用于检查token输入输出数量是否合法。
+>* routeContractCodeHashArray: 一个合约代码hash的数组，routeContract是用来转账时对输入输出的token数量进行检查。这里支持5种不同的合约，可以对于不同的输入输出使用不同的检查脚本，比如3输入3输入，6输入6输出，10输入10输出，20输入3输出，3输入20输出5种不同类型的合约，在合约转账时可以根据具体的需求，来选择生成不同的合约，能够灵活支持大规模的转账，同时控制token合约的size。
+>* unlockContractCodeHashArray: 类似与routeContractCodeHashArray, 是在unlockFromContract时用于检查token输入输出数量是否匹配。需要注意的是，unlockFromContract在检查输入输出事，输入检查的是token输入数量，输出检查的是所有的输出包括非token的输出。因此tokenUnlockContractCheck合约里面的输出数量的限制，是该交易的所有输出数量的限制。
 >* genesisContractHash: 是genesis合约的hash，用于增发时检测增发行为是否合法。在第一步生成genesis utxo的lockingScript，将其中的tokenID数据区段用真正的tokenID替换得到新的newLockingScript，然后使用sha256ripemd160(newLockingScript)得到hash值。
 
 token合约生成后，需要设置token的data字段。
@@ -87,7 +94,7 @@ token合约生成后，需要设置token的data字段。
 ```
 >* txPreimage: preimage
 >* sig: 发行者对tx的签名
->* rabinMsg: 对于此genesis合约的验证消息，如果是第一次生成的genesis合约，则不需要验证，可以随便填写。后面的rabinPaddingArray,rabinSigArray也是一样。
+>* rabinMsg: 对于此genesis合约的验证消息，使用第二种rabin消息格式。如果是第一次生成的genesis合约，则不需要验证，可以随便填写。后面的rabinPaddingArray,rabinSigArray也是一样。
 >* rabinPaddingArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的padding。
 >* rabinSigArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的sig
 >* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
@@ -144,7 +151,7 @@ public function unlock(
 >* nSenders：tx的输入中token utxo的数量。
 >* tokenScript: 输入token utxo中任意一个输入的锁定脚本。
 >* prevouts：prevouts。
->* rabinMsgArray：所有输入token的rabin msg array，按照token在tx中的输入顺序排列。
+>* rabinMsgArray：所有输入token的rabin msg array，按照token在tx中的输入顺序排列。这里使用的是第一种签名消息格式，对“某UTXO”签名。
 >* rabinPaddingArray：输入msg的rabin签名padding array。按照token在tx中的顺序排列。<input 0> + <input 1> + ...。其中每个input i是由3个padding所组成，分别是3个rabinPubKey所对应的padding。
 >* rabinSigArray: 输入msg的rabin签名。<input 0> + <input 1> + ...。类似于padding，每个input i也是由3个签名所组成，分别对应3个rabinPubKey。
 >* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
@@ -182,7 +189,7 @@ public function unlock(
 
 >* txPreimage: preimage。
 >* prevouts: prevouts。
->* rabinMsg: 对于自己的utxo的前一个交易的签名消息。
+>* rabinMsg: 对于自己的utxo的前一个交易的签名消息。这是使用的是第二种rabin消息签名格式。
 >* rabinPaddingArray：对于自己的rabin签名padding array。
 >* rabinSigArray： 对于自己的rabin签名。
 >* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。

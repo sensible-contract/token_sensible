@@ -8,12 +8,12 @@ import "rabinUtil.scrypt";
  */
 contract Token {
   int[3] rabinPubKeyArray;
-  bytes[3] routeContractCodeHashArray;
-  bytes[3] unlockContractCodeHashArray;
+  bytes[5] routeContractCodeHashArray;
+  bytes[5] unlockContractCodeHashArray;
   bytes genesisContractHash;
 
   function verifyAmountCheckContract(
-    bytes[3] contractCodeHashArray,
+    bytes[5] contractCodeHashArray,
     bytes prevouts,
     int contractInputIndex,
     bytes prevScriptTx,
@@ -43,7 +43,7 @@ contract Token {
 
     bytes hash = hash160(prevScriptCode[: scriptLen - dataOffset]);
 
-    return hash == contractCodeHashArray[0] || hash == contractCodeHashArray[1] || hash == contractCodeHashArray[2];
+    return hash == contractCodeHashArray[0] || hash == contractCodeHashArray[1] || hash == contractCodeHashArray[2] || hash == contractCodeHashArray[3] || hash == contractCodeHashArray[4];
   }
 
   // operation: 1 transfer, 2 unlockFromContract
@@ -77,7 +77,7 @@ contract Token {
     bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
 
     bytes tokenCodeHash = TokenProto.getContractCodeHash(tokenScript, scriptLen);
-    bytes[3] hashArray = [b'', b'', b''];
+    bytes[5] hashArray = [b'', b'', b'', b'', b''];
 
     if (operation == 1) {
       require(nReceivers > 0);

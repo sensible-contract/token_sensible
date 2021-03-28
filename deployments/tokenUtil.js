@@ -110,12 +110,12 @@ TokenUtil.initContractHash = function(rabinPubKeyArray) {
   const routeCheckCode = new RouteCheck(rabinPubKeyArray)
   let code = routeCheckCode.lockingScript.toBuffer()
   const routeCheckCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
-  routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
+  routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
 
   const unlockContract = new UnlockContractCheck(rabinPubKeyArray)
   code = unlockContract.lockingScript.toBuffer()
   const unlockContractCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
-  unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
+  unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
 
 }
 

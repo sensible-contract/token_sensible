@@ -74,6 +74,7 @@ const decimalNum = Buffer.from('08', 'hex')
 let routeCheckCodeHashArray
 let unlockContractCodeHashArray
 let genesisHash
+let genesisScriptBuf
 let tokenCodeHash
 
 const maxInputLimit = 3
@@ -83,10 +84,29 @@ let Token, RouteCheck, UnlockContractCheck, TokenSell
 
 function initContract() {
   const use_desc = false
+  Genesis = genContract('tokenGenesis', use_desc)
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
   TokenSell = genContract('tokenSell', true)
+}
+
+function createTokenGenesisContract() {
+  const issuerPubKey = privateKey.publicKey
+  const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
+  const oracleData = Buffer.concat([
+    tokenName,
+    tokenSymbol,
+    genesisFlag, 
+    decimalNum,
+    Buffer.alloc(20, 0), // address
+    Buffer.alloc(8, 0), // token value
+    tokenID, // script code hash
+    tokenType, // type
+    PROTO_FLAG
+  ])
+  genesis.setDataPart(oracleData.toString('hex'))
+  return genesis
 }
 
 function initContractHash() {
@@ -100,16 +120,18 @@ function initContractHash() {
   const unlockContractCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
   unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
 
-  //TODO:
-  genesisHash = routeCheckCodeHash
+  const genesis = createTokenGenesisContract()
+  genesisScriptBuf = genesis.lockingScript.toBuffer()
+  genesisHash = bsv.crypto.Hash.sha256ripemd160(genesisScriptBuf).toString('hex')
+  //console.log("genesisHash:", genesisHash)
 
-  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
+  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   code = tokenContract.lockingScript.toBuffer()
   tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(code)
 }
 
 function createTokenContract(addressBuf, amount) {
-  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, genesisHash)
+  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   const data = Buffer.concat([
     tokenName,
     tokenSymbol,
@@ -351,9 +373,9 @@ function verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nOut
     inputSatoshis: inputSatoshis 
   }
 
-  const scriptBuf = token.lockingScript.toBuffer()
-  let prevTokenAddress = TokenProto.getTokenAddress(scriptBuf)
-  let prevTokenAmount = TokenProto.getTokenAmount(scriptBuf)
+  const prevTokenAddress = address2.hashBuffer
+  const prevTokenAmount = 1999
+  const scriptBuf = TokenProto.getNewTokenScript(token.lockingScript.toBuffer(), prevTokenAddress, prevTokenAmount)
   const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, inputIndex, inputSatoshis, scriptBuf, dummyTxId)
 
   const result = token.unlock(
@@ -442,6 +464,68 @@ function unlockFromContract(args) {
   verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, 1, 1, 2, unlockContractCheckTx, 0, 0, tokenSellTx, 0, OP_UNLOCK_FROM_CONTRACT, tokenExpected)
 }
 
+function simpleRouteUnlock(preUtxoId, preUtxoOutputIndex, scriptBuf, expected=true, wrongRabin=false, wrongRouteCheck=0) {
+  const tokenInputAmount = 100
+  const token = createTokenContract(address1.hashBuffer, tokenInputAmount)
+
+  const tx = new bsv.Transaction()
+  let prevouts = []
+  addInput(tx, token.lockingScript, 0, prevouts)
+  let routeCheck, routeCheckTx
+  if (wrongRouteCheck) {
+    [routeCheck, routeCheckTx] = createUnlockContractCheck(1, [tokenInputAmount], [address1.hashBuffer])
+  } else {
+    [routeCheck, routeCheckTx] = createRouteCheckContract(1, [tokenInputAmount])
+  }
+  const contractInputIndex = 1
+  addInput(tx, routeCheck.lockingScript, contractInputIndex, prevouts, prevTxId=routeCheckTx.id)
+  prevouts = Buffer.concat(prevouts)
+
+  addOutput(tx, token.lockingScript, inputSatoshis)
+
+  let inputIndex = 0
+  const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
+  const preimage = getPreimage(tx, token.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
+  const sig = signTx(tx, privateKey, token.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
+
+  let [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(preUtxoId, preUtxoOutputIndex, inputSatoshis, scriptBuf, dummyTxId)
+  if (wrongRabin) {
+    rabinSigArray = [0, 0]
+  }
+  //console.log("simpleRouteUnlock:", scriptBuf.toString('hex'), rabinMsg.toString('hex'))
+
+  const txContext = { 
+    tx: tx, 
+    inputIndex: inputIndex, 
+    inputSatoshis: inputSatoshis 
+  }
+  const result = token.unlock(
+    new SigHashPreimage(toHex(preimage)),
+    new Bytes(prevouts.toString('hex')),
+    new Bytes(rabinMsg.toString('hex')),
+    rabinPaddingArray,
+    rabinSigArray,
+    [0, 1],
+    contractInputIndex,
+    new Bytes(routeCheckTx.toString('hex')),
+    0,
+    1,
+    new Bytes('00'),
+    0,
+    new PubKey(toHex(privateKey.publicKey)),
+    new Sig(toHex(sig)),
+    0,
+    new Bytes('00'),
+    0,
+    OP_TRANSFER
+  ).verify(txContext)
+  if (expected) {
+    expect(result.success, result.error).to.be.true
+  } else {
+    expect(result.success, result.error).to.be.false
+  }
+}
+
 describe('Test token contract unlock In Javascript', () => {
   before(() => {
     initContract()
@@ -466,6 +550,23 @@ describe('Test token contract unlock In Javascript', () => {
     }
     verifyTokenContract(maxInputLimit, maxOutputLimit, true, true, 2, 1000)
   });
+
+  it('should failed when token is unlock from wrong rabin sig', () => {
+    simpleRouteUnlock(dummyTxId, 0, Buffer.alloc(20), expected=false, wrongRabin=true)
+  })
+
+  it('should failed when token is unlock from wrong tokenRouteCheck', () => {
+    simpleRouteUnlock(dummyTxId, 0, Buffer.alloc(20), expected=false, wrongRabin=false, wrongRouteCheck=true)
+  })
+
+  it('should succeed when token is generated from genesis', () => {
+    simpleRouteUnlock(dummyTxId, 0, Buffer.alloc(20))
+    simpleRouteUnlock(dummyTxId, 1, genesisScriptBuf)
+  })
+
+  it('should failed when token is unlock from wrong genesis', () => {
+    simpleRouteUnlock(dummyTxId, 1, Buffer.alloc(20), expected=false)
+  })
 
   it('it should succeed when using unlockFromContract', () => {
     // create the contract tx

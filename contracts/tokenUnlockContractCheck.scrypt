@@ -86,6 +86,7 @@ contract TokenUnlockContractCheck {
         bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, amount);
 
         require(hash160(lockingScript) == u4.scriptHash);
+        require(tokenID == TokenProto.getTokenID(lockingScript, tokenScriptLen));
 
         sumInputToken = sumInputToken + amount;
       }

@@ -2,10 +2,10 @@ import "util.scrypt";
 import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
 
-// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenContractCodeHash +  tokenID
+// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenContractCodeHash + tokenID
 contract TokenRouteCheck {
   int[3] rabinPubKeyArray;
-    
+
   public function unlock(
     SigHashPreimage txPreimage,
     int nSenders,
@@ -51,10 +51,10 @@ contract TokenRouteCheck {
     // max support loop num input token
     loop(3) {
       if (i < nSenders) {
-        int j = 0;
         // verify rabin signature
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
+        int j = 0;
         loop(2) {
           int pubIndex = rabinPubKeyIndexArray[j];
           int rabinPubKey = this.rabinPubKeyArray[pubIndex];
@@ -79,17 +79,16 @@ contract TokenRouteCheck {
 
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
         int amount = Util.fromLEUnsigned(inputTokenAmountArray[i * 8: (i + 1) * 8]);
-        int lsLen = len(tokenScript); 
-        bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, lsLen, address, amount);
+        bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, amount);
 
         require(hash160(lockingScript) == u4.scriptHash);
-        require(tokenID == TokenProto.getTokenID(lockingScript, lsLen));
+        require(tokenID == TokenProto.getTokenID(lockingScript, tokenScriptLen));
 
         sumInputToken = sumInputToken + amount;
       }
       i = i + 1;
     }
-    
+
     // check the outputs
     bytes outputs = b'';
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output

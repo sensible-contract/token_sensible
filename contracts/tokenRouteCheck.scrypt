@@ -34,6 +34,7 @@ contract TokenRouteCheck {
     int pos = TokenProto.TOKEN_ID_LEN + 20;
     bytes tokenCodeHash = scriptCode[scriptLen - pos: scriptLen - TokenProto.TOKEN_ID_LEN];
     require(tokenCodeHash == TokenProto.getContractCodeHash(tokenScript, tokenScriptLen));
+    require(tokenID == TokenProto.getTokenID(tokenScript, tokenScriptLen));
 
     int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
     pos += 1;
@@ -83,7 +84,6 @@ contract TokenRouteCheck {
         bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, lsLen, address, amount);
 
         require(hash160(lockingScript) == u4.scriptHash);
-        require(tokenID == TokenProto.getTokenID(lockingScript, lsLen));
 
         sumInputToken = sumInputToken + amount;
       }

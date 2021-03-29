@@ -80,8 +80,7 @@ contract TokenRouteCheck {
 
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
         int amount = Util.fromLEUnsigned(inputTokenAmountArray[i * 8: (i + 1) * 8]);
-        int lsLen = len(tokenScript); 
-        bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, lsLen, address, amount);
+        bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, amount);
 
         require(hash160(lockingScript) == u4.scriptHash);
 

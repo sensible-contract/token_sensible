@@ -60,6 +60,7 @@ utils.addOutput = function(tx, lockingScript, outputSatoshis=inputSatoshis) {
     script: lockingScript,
     satoshis: outputSatoshis
   }))
+  //console.log('addOutput: output:', tx.outputs.length, tx.outputs[tx.outputs.length-1].toBufferWriter().toBuffer().toString('hex'))
 }
 
 utils.createRabinMsg = function(txid, outputIndex, satoshis, scriptBuf, spendByTxId=null) {

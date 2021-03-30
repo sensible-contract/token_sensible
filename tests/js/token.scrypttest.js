@@ -142,7 +142,7 @@ function createTokenContract(addressBuf, amount) {
   return token
 }
 
-function createRouteCheckContract(nOutputs, outputTokenArray, tid=tokenID) {
+function createRouteCheckContract(nOutputs, outputTokenArray, tid=tokenID, tcHash=tokenCodeHash) {
   const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nOutputs, outputTokenArray)
   const tx = new bsv.Transaction()
   addInput(tx, bsv.Script.buildPublicKeyHashOut(address1), 0, [])
@@ -153,7 +153,7 @@ function createRouteCheckContract(nOutputs, outputTokenArray, tid=tokenID) {
     receiverTokenAmountArray,
     recervierArray,
     nReceiverBuf,
-    tokenCodeHash,
+    tcHash,
     tid,
   ])
   routeCheck.setDataPart(data.toString('hex'))
@@ -212,7 +212,7 @@ function createUnlockContractCheck(nTokenOutputs, tokenOutputAmounts, tokenOutpu
   return [unlockContractCheck, tx]
 }
 
-function verifyRouteCheck(tx, prevouts, routeCheck, tokenInstance, nTokenInputs, receiverSatoshiArray, changeSatoshi, inputIndex, expected) {
+function verifyRouteCheck(tx, rabinPubKeyIndexArray, prevouts, routeCheck, tokenInstance, nTokenInputs, receiverSatoshiArray, changeSatoshi, inputIndex, expected) {
 
   const txContext = { 
     tx: tx, 
@@ -284,7 +284,7 @@ function verifyRouteCheck(tx, prevouts, routeCheck, tokenInstance, nTokenInputs,
     new Bytes(rabinMsgArray.toString('hex')),
     new Bytes(rabinPaddingArray.toString('hex')),
     new Bytes(rabinSignArray.toString('hex')),
-    [0, 1],
+    rabinPubKeyIndexArray,
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(receiverSatoshiArray.toString('hex')),
@@ -337,7 +337,11 @@ function verifyTokenTransfer(nTokenInputs, nTokenOutputs, nSatoshiInput, changeS
   if (args.wrongTokenID) {
     tid = tokenID2 
   }
-  const [routeCheck, routeCheckTx] = createRouteCheckContract(nTokenOutputs, outputTokenArray, tid=tid)
+  let tcHash = tokenCodeHash
+  if (args.wrongTokenCodeHash) {
+    tcHash = Buffer.alloc(20, 0)
+  }
+  const [routeCheck, routeCheckTx] = createRouteCheckContract(nTokenOutputs, outputTokenArray, tid=tid, tcHash=tcHash)
   const contractInputIndex = nTokenInputs + nSatoshiInput
   addInput(tx, routeCheck.lockingScript, contractInputIndex, prevouts, prevTxId=routeCheckTx.id)
 
@@ -353,13 +357,18 @@ function verifyTokenTransfer(nTokenInputs, nTokenOutputs, nSatoshiInput, changeS
     addOutput(tx, bsv.Script.buildPublicKeyHashOut(address1), changeSatoshi)
   }
 
+  let rabinPubKeyIndexArray = [0, 1]
+  if (args.wrongRabinPubKeyIndex) {
+    rabinPubKeyIndexArray = [0, 0]
+  }
+
   //console.log('outputTokenArray:', outputTokenArray)
   for (let i = 0; i < nTokenInputs; i++) {
-    verifyOneTokenContract(tx, [0, 1], prevouts, tokenInstance[i], nTokenOutputs, i, contractInputIndex, routeCheckTx, 0, 0, Buffer.alloc(1), 0, OP_TRANSFER, args.tokenExpected)
+    verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, tokenInstance[i], nTokenOutputs, i, contractInputIndex, routeCheckTx, 0, 0, Buffer.alloc(1), 0, OP_TRANSFER, args.tokenExpected)
   }
 
   const {recervierArray, receiverTokenAmountArray, receiverSatoshiArray} = genReceiverData(nTokenOutputs, outputTokenArray)
-  verifyRouteCheck(tx, prevouts, routeCheck, tokenInstance, nTokenInputs, receiverSatoshiArray, changeSatoshi, contractInputIndex, args.checkExpected)
+  verifyRouteCheck(tx, rabinPubKeyIndexArray, prevouts, routeCheck, tokenInstance, nTokenInputs, receiverSatoshiArray, changeSatoshi, contractInputIndex, args.checkExpected)
 }
 
 function verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nOutputs, inputIndex, checkInputIndex, checkScriptTx, checkScriptTxOutputIndex, lockContractInputIndex, lockContractTx, lockContractTxOutIndex, op, expected) {
@@ -638,6 +647,24 @@ describe('Test token contract unlock In Javascript', () => {
       tokenExpected: false,
       checkExpected: false,
       wrongTokenID: true,
+    }
+    verifyTokenTransfer(1, 1, 0, 0, args)
+  })
+
+  it('should failed with wrong token code hash in routeAmountCheck', () => {
+    args = {
+      tokenExpected: false,
+      checkExpected: false,
+      wrongTokenCodeHash: true,
+    }
+    verifyTokenTransfer(1, 1, 0, 0, args)
+  })
+
+  it('should failed with wrong rabin pubkey index array in routeAmountCheck', () => {
+    args = {
+      tokenExpected: false,
+      checkExpected: false,
+      wrongRabinPubKeyIndex: true,
     }
     verifyTokenTransfer(1, 1, 0, 0, args)
   })

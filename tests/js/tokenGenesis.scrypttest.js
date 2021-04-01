@@ -58,7 +58,7 @@ const buffValue = Buffer.alloc(8, 0)
 buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const decimalNum = Buffer.from('08', 'hex')
 const routeCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
-const routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
+const routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
 const unlockContractCodeHash = routeCheckCodeHash
 const unlockContractCodeHashArray = routeCheckCodeHashArray
 let genesisHash

@@ -98,7 +98,7 @@ token合约生成后，需要设置token的data字段。
 >* rabinPaddingArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的padding。
 >* rabinSigArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的sig
 >* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
->* genesisSatoshis: 输出新的genesis合约的satoshis，如果填0，则不会输出新的satoshis合约。
+>* genesisSatoshis: 输出新的genesis合约的satoshis，如果填0，则不会输出新的genesis合约, 意味着此token合约放弃增发。
 >* tokenScript: 输出token的lockingScript
 >* tokenSatoshi: 输出token的satoshis
 >* changeAddress: 找零的address

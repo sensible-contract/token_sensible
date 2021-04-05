@@ -54,7 +54,7 @@ library TokenProto {
   }
 
   static function getNewTokenScript(bytes script, int slen, bytes address, int tokenValue): bytes {
-    return script[0: slen - TokenProto.TOKEN_ADDRESS_OFFSET] + address + num2bin(tokenValue, 8) + script[slen - TokenProto.TOKEN_ID_OFFSET: slen];
+    return script[0: slen - TokenProto.TOKEN_ADDRESS_OFFSET] + address +  Util.toLEUnsigned(tokenValue, 8) + script[slen - TokenProto.TOKEN_ID_OFFSET: slen];
   }
 
   static function getTokenID(bytes script, int slen): bytes {
@@ -99,7 +99,7 @@ library TokenProto {
     int tokenAmount,
     bytes tokenID
     ): bytes {
-    return tokenCode + codeHash + tokenName + b'00' + decimalNum + tokenAddress + num2bin(tokenAmount, 8) + tokenID + num2bin(TokenProto.PROTO_TYPE, 4) + TokenProto.PROTO_FLAG;
+    return tokenCode + codeHash + tokenName + b'00' + decimalNum + tokenAddress + Util.toLEUnsigned(tokenAmount, 8) + tokenID + Util.toLEUnsigned(TokenProto.PROTO_TYPE, 4) + TokenProto.PROTO_FLAG;
   }
 
   static function getNewGenesisScript(bytes script, int slen, bytes tokenID): bytes {

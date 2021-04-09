@@ -45,7 +45,7 @@ rabin的签名方式可以参见[satotx](https://github.com/sensing-contract/sat
 
 ![image](imgs/genesis_tx.png)
 
-将genesis合约的锁定脚本作为tx一个输出的script，生成一个tx。tokenID也就确定为此输出的outputpoint。
+将genesis合约的锁定脚本作为tx一个输出的script，生成一个tx。tokenID也就确定为此输出的outputpoint。可在测试网上查看此类型[tx实例](https://test.whatsonchain.com/tx/f89053a1997e70412f455f72a02e76dba289608577505fff359d7ea62c7ba4eb)。
 
 ## **2 发行Token**
 
@@ -71,7 +71,7 @@ token合约生成后，需要设置token的data字段。
 
 ![image](imgs/token_tx.png)
 
-将第一步生成的genesis utxo作为输入，生成新的genesis utxo，以及新的token utxo。新的Genesis'是用于之后增发新的token，如果不需要增发，则可以选择不输出Genesis'。
+将第一步生成的genesis utxo作为输入，生成新的genesis utxo，以及新的token utxo。新的Genesis'是用于之后增发新的token，如果不需要增发，则可以选择不输出Genesis'。可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/8b4c8f101451e9a958e442d77d283cb82c218c2e36966adf01559a92c146d86f)。
 
 ### **genesis合约解锁**
 
@@ -118,7 +118,7 @@ contract TokenRouteCheck {
 
 ### **3.2 创建routeCheck tx**
 
-将创建的routeCheck合约的lockingScript放入一个输出的script中。
+将创建的routeCheck合约的lockingScript放入一个输出的script中。可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/e321d5ea44edb99231a7eb67fde664cd0a8e402d3c89ce9fc090eb2284e23646)。
 
 ![image](imgs/token_route_check_tx.png)
 
@@ -126,7 +126,7 @@ contract TokenRouteCheck {
 
 ![image](imgs/token_transfer_tx.png)
 
-将需要转账的token作为输入，注意token输入必须是从input 0开始，然后连续排列。同时用3.2得到的routeCheck utxo也作为其中一个输入，注意其必须是放在input的最后，然后输出token以及找零的utxo。
+将需要转账的token作为输入，注意token输入必须是从input 0开始，然后连续排列。同时用3.2得到的routeCheck utxo也作为其中一个输入，注意其必须是放在input的最后，然后输出token以及找零的utxo可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/d4643990952233445403f5ec050e96f491702fb60cb9b704009d50358e589f69)。
 
 ### **routeCheck解锁**
 

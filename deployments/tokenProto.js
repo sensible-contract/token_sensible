@@ -29,6 +29,9 @@ token.EMPTY_ADDRESS = Buffer.alloc(TOKEN_ADDRESS_LEN, 0)
 
 token.PROTO_TYPE = 1
 
+token.OP_TRANSFER = 1
+token.OP_UNLOCK_FROM_CONTRACT = 2
+
 token.getHeaderLen = function() {
   return TOKEN_HEADER_LEN
 }
@@ -82,16 +85,6 @@ token.getNewTokenScript = function(scriptBuf, address, tokenAmount) {
     address,
     amountBuf,
     scriptBuf.subarray(scriptBuf.length - TOKEN_ID_OFFSET, scriptBuf.length)
-  ])
-  return newScript
-}
-
-token.getNewGenesisScript = function(scriptBuf, tokenID) {
-  const firstBuf = scriptBuf.subarray(0, scriptBuf.length - TOKEN_ID_OFFSET)
-  const newScript = Buffer.concat([
-    firstBuf,
-    tokenID,
-    scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
   ])
   return newScript
 }

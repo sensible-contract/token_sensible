@@ -33,6 +33,8 @@ utils.rabinPrivateKey = {
 }
 utils.rabinPubKey = privKeyToPubKey(utils.rabinPrivateKey.p, utils.rabinPrivateKey.q)
 
+utils.rabinPubKeyArray = [utils.rabinPubKey, utils.rabinPubKey, utils.rabinPubKey]
+
 utils.genContract = function(name, use_desc=false) {
   if (use_desc) {
     return buildContractClass(loadDesc(name + '_desc.json'))

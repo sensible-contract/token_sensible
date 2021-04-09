@@ -78,7 +78,7 @@ const maxOutputLimit = 3
 let Token, RouteCheck, UnlockContractCheck, TokenSell
 
 function initContract() {
-  const use_desc = true
+  const use_desc = false
   Genesis = genContract('tokenGenesis', use_desc)
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)

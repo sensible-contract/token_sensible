@@ -88,7 +88,7 @@ utils.createRabinMsg = function(txid, outputIndex, satoshis, scriptBuf, spendByT
   return [rabinMsg, rabinPaddingArray, rabinSigArray]
 }
 
-utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIndex, nTokenInputs, prevouts, inputTokenIndexes, tokenOutputIndexes, isBurn=false, expected=true) {
+utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIndex, prevouts, inputTokenIndexes, tokenOutputIndexes, expected=true) {
 
   const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
   const preimage = getPreimage(tx, unlockContractCheck.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
@@ -103,7 +103,6 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
   let inputRabinSignArray = Buffer.alloc(0)
   let inputTokenAddressArray = Buffer.alloc(0)
   let inputTokenAmountArray = Buffer.alloc(0)
-  let inputTokenIndexArray = Buffer.alloc(0)
   let tokenScript
   for (let i = 0; i < inputTokenIndexes.length; i++) {
     const tokenInput = tx.inputs[inputTokenIndexes[i]]
@@ -113,10 +112,6 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
       TokenUtil.getUInt32Buf(tokenInput.outputIndex),
       TokenUtil.getUInt64Buf(tokenInput.output.satoshis),
       Buffer.from(bsv.crypto.Hash.sha256ripemd160(tokenScript.toBuffer()))
-    ])
-    inputTokenIndexArray = Buffer.concat([
-      inputTokenIndexArray,
-      TokenUtil.getUInt32Buf(inputTokenIndexes[i])
     ])
     inputRabinMsgArray = Buffer.concat([
       inputRabinMsgArray,
@@ -178,21 +173,18 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
 
   const result = unlockContractCheck.unlock(
     new SigHashPreimage(toHex(preimage)),
-    nTokenInputs,
     new Bytes(tokenScript.toBuffer().toString('hex')),
     new Bytes(prevouts.toString('hex')),
     new Bytes(inputRabinMsgArray.toString('hex')),
     new Bytes(inputRabinPaddingArray.toString('hex')),
     new Bytes(inputRabinSignArray.toString('hex')),
     [0, 1],
-    new Bytes(inputTokenIndexArray.toString('hex')),
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     nOutputs,
     new Bytes(tokenOutputIndexArray.toString('hex')),
     new Bytes(tokenOutputSatoshiArray.toString('hex')),
-    new Bytes(otherOutputArray.toString('hex')),
-    isBurn
+    new Bytes(otherOutputArray.toString('hex'))
   ).verify(txContext)
   if (expected === true) {
     expect(result.success, result.error).to.be.true

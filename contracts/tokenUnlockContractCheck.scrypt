@@ -2,27 +2,24 @@ import "util.scrypt";
 import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
 
-// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenCodeHash + tokenID
+// opreturn + inputTokenIndexArray + nSenders(4 bytes) + receiverTokenAmountArray + receiverArray + nReceivers(4 bytes) + tokenCodeHash + tokenID
 contract TokenUnlockContractCheck {
   int[3] rabinPubKeyArray;
     
   public function unlock(
     SigHashPreimage txPreimage,
-    int nSenders,
     bytes tokenScript,
     bytes prevouts,
     bytes rabinMsgArray,
     bytes rabinPaddingArray,
     bytes rabinSigArray,
     int[2] rabinPubKeyIndexArray,
-    bytes inputTokenIndexArray,
     bytes inputTokenAddressArray,
     bytes inputTokenAmountArray,
     int nOutputs,
     bytes tokenOutputIndexArray,
     bytes tokenOutputSatoshiArray,
-    bytes otherOutputArray,
-    bool isBurn
+    bytes otherOutputArray
   ) {
 
     require(Tx.checkPreimage(txPreimage));
@@ -39,15 +36,20 @@ contract TokenUnlockContractCheck {
     require(tokenCodeHash == TokenProto.getContractCodeHash(tokenScript, tokenScriptLen));
     require(tokenID == TokenProto.getTokenID(tokenScript, tokenScriptLen));
 
-    int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
-    pos += 1;
+    int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 4: scriptLen - pos]);
+    pos += 4;
 
     bytes receiverArray = scriptCode[scriptLen - pos - nReceivers * TokenProto.TOKEN_ADDRESS_LEN: scriptLen - pos];
     pos += nReceivers * TokenProto.TOKEN_ADDRESS_LEN;
 
     bytes receiverTokenAmountArray = scriptCode[scriptLen - pos - nReceivers * TokenProto.TOKEN_AMOUNT_LEN: scriptLen - pos];
+    pos += nReceivers * TokenProto.TOKEN_AMOUNT_LEN; 
+    int nSenders = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 4: scriptLen - pos]);
+    pos += 4;
+    bytes inputTokenIndexArray = scriptCode[scriptLen - pos - 4 * nSenders: scriptLen - pos];
 
     int i = 0;
+    bool isBurn = true;
     int sumInputToken = 0;
     int paddingPos = 0;
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
@@ -83,6 +85,9 @@ contract TokenUnlockContractCheck {
         require(u4.outpoint == prevouts[inputIndex * 36: (inputIndex + 1) * 36]);
 
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
+        if (address != b'0000000000000000000000000000000000000000') {
+          isBurn = false;
+        }
         int amount = Util.fromLEUnsigned(inputTokenAmountArray[i * 8: (i + 1) * 8]);
         bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, amount);
 
@@ -114,7 +119,7 @@ contract TokenUnlockContractCheck {
           bytes outputScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, tokenAmount);
           int outputSatoshi = Util.fromLEUnsigned(tokenOutputSatoshiArray[tokenIndex * 8: (tokenIndex + 1) * 8]);
           bytes output = Util.buildOutput(outputScript, outputSatoshi);
-          outputs = outputs + output;
+          outputs += output;
           tokenIndex += 1;
           if (tokenIndex < nReceivers) {
             tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[tokenIndex * 4: (tokenIndex + 1) * 4]);

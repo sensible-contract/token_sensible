@@ -334,6 +334,7 @@ TokenUtil.createToken = function(
  * @param outputSatoshis {int} the routeCheckAmount contract utxo output satoshis
  * @param fee {int} the tx fee
  * @param changeAddress {Object} bsv.Address
+ * @param nTokenInputs {Number} number of input tokens
  * @param tokenOutputArray {object[]} the token output array
  * @param rabinPubKeyArray {BigInt[]} rabin pubkey array
  * @param tokenID {Buffer} the tokenID
@@ -346,14 +347,14 @@ TokenUtil.createRouteCheckTx = function(
   outputSatoshis,
   fee,
   changeAddress,
+  nTokenInputs,
   tokenOutputArray,
-  tokenID,
-  tokenCodeHash,
+  tokenIDBuf,
+  tokenCodeHashBuf,
 ) {
   let receiverTokenAmountArray = Buffer.alloc(0)
   let recervierArray = Buffer.alloc(0)
   const nTokenOutputs = tokenOutputArray.length
-  let nReceiverBuf = TokenUtil.getUInt8Buf(nTokenOutputs)
   for (let i = 0; i < nTokenOutputs; i++) {
     const output = tokenOutputArray[i]
     recervierArray = Buffer.concat([recervierArray, output.address])
@@ -364,11 +365,12 @@ TokenUtil.createRouteCheckTx = function(
   }
   const routeCheck = new RouteCheck(Common.rabinPubKeyArray)
   const data = Buffer.concat([
+    TokenUtil.getUInt32Buf(nTokenInputs),
     receiverTokenAmountArray,
     recervierArray,
-    nReceiverBuf,
-    tokenCodeHash,
-    tokenID,
+    TokenUtil.getUInt32Buf(nTokenOutputs),
+    tokenCodeHashBuf,
+    tokenIDBuf,
   ])
   routeCheck.setDataPart(data.toString('hex'))
 
@@ -377,22 +379,29 @@ TokenUtil.createRouteCheckTx = function(
 }
 
 TokenUtil.createUnlockContractCheckTx = function(
-  tokenID,
-  tokenScriptCodeHash,
+  tokenIDBuf,
+  tokenScriptCodeHashBuf,
   bsvFeeTx, 
   bsvFeeOutputIndex,
   inputPrivKey, 
   outputSatoshis,
   fee,
   changeAddress,
+  tokenInputIndexArray,
   nTokenOutputs,
   tokenOutputAmountArray,
   tokenOutputAddressArray,
 ) {
   const unlockContractCheck = new UnlockContractCheck(Common.rabinPubKeyArray)
+
+  const nTokenInputs = tokenInputIndexArray.length
+  let tokenInputIndexBytes = Buffer.alloc(0)
+  for (let i = 0; i < nTokenInputs; i++) {
+    tokenInputIndexBytes = Buffer.concat([tokenInputIndexBytes, TokenUtil.getUInt32Buf(tokenInputIndexArray[i])]);
+  }
+
   let receiverTokenAmountArray = Buffer.alloc(0)
   let recervierArray = Buffer.alloc(0)
-  let nReceiverBuf = TokenUtil.getUInt8Buf(nTokenOutputs)
   for (let i = 0; i < nTokenOutputs; i++) {
     recervierArray = Buffer.concat([recervierArray, tokenOutputAddressArray[i]])
     receiverTokenAmountArray = Buffer.concat([
@@ -401,11 +410,13 @@ TokenUtil.createUnlockContractCheckTx = function(
     ])
   }
   const data = Buffer.concat([
+    tokenInputIndexBytes,
+    TokenUtil.getUInt32Buf(nTokenInputs),
     receiverTokenAmountArray,
     recervierArray,
-    nReceiverBuf,
-    tokenScriptCodeHash,
-    tokenID,
+    TokenUtil.getUInt32Buf(nTokenOutputs),
+    tokenScriptCodeHashBuf,
+    tokenIDBuf,
   ])
   unlockContractCheck.setDataPart(data.toString('hex'))
 
@@ -419,6 +430,7 @@ TokenUtil.unlockToken = function(
   tx,
   tokenContract,
   inputIndex,
+  tokenInputIndex,
   prevTokenTx,
   prevTokenOutputIndex,
   prevouts,
@@ -426,8 +438,8 @@ TokenUtil.unlockToken = function(
   checkScriptTx,
   checkScriptTxOutputIndex,
   nReceivers,
-  senderPubKey,
-  senderSig,
+  senderPubKeyHex,
+  senderSigHex,
   lockContractInputIndex,
   lockConctractTxRaw,
   lockContractTxOutputIndex,
@@ -447,6 +459,7 @@ TokenUtil.unlockToken = function(
 
   const unlockRes = tokenContract.unlock(
     new SigHashPreimage(toHex(preimage)),
+    tokenInputIndex,
     new Bytes(prevouts.toString('hex')),
     new Bytes(rabinMsg.toString('hex')),
     rabinPaddingArray,
@@ -458,8 +471,8 @@ TokenUtil.unlockToken = function(
     nReceivers,
     new Bytes(prevTokenAddress.toString('hex')),
     prevTokenAmount,
-    new PubKey(toHex(senderPubKey)),
-    new Sig(toHex(senderSig)),
+    new PubKey(senderPubKeyHex),
+    new Sig(senderSigHex),
     lockContractInputIndex,
     new Bytes(lockConctractTxRaw),
     lockContractTxOutputIndex,
@@ -541,7 +554,6 @@ TokenUtil.unlockRouteCheck = function(
   const tokenScriptHex = tx.inputs[0].output.script.toBuffer().toString('hex')
   const unlockRes = routeCheckContract.unlock(
     new SigHashPreimage(toHex(preimage)),
-    nTokenInputs,
     new Bytes(tokenScriptHex),
     new Bytes(prevouts.toString('hex')),
     new Bytes(checkRabinMsgArray.toString('hex')),
@@ -658,21 +670,18 @@ TokenUtil.unlockUnlockContractCheck = function(
 
   const unlockRes = unlockContractCheck.unlock(
     new SigHashPreimage(toHex(preimage)),
-    inputTokenIndexes.length,
     new Bytes(tokenScript.toBuffer().toString('hex')),
     new Bytes(prevouts.toString('hex')),
     new Bytes(inputRabinMsgArray.toString('hex')),
     new Bytes(inputRabinPaddingArray.toString('hex')),
     new Bytes(inputRabinSignArray.toString('hex')),
     [0, 1],
-    new Bytes(inputTokenIndexArray.toString('hex')),
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     nOutputs,
     new Bytes(tokenOutputIndexArray.toString('hex')),
     new Bytes(tokenOutputSatoshiArray.toString('hex')),
-    new Bytes(otherOutputArray.toString('hex')),
-    isBurn
+    new Bytes(otherOutputArray.toString('hex'))
   )
   const txContext = {
     tx: tx,
@@ -778,7 +787,7 @@ TokenUtil.createTokenTransfer = function(
     let sig = signTx(tx, senderPrivKey, tokenScript.toASM(), satoshis, inputIndex=inIndex, sighashType=sigtype)
 
     const tokenContract = tokenInput.tokenContract
-    const unlockingScript = TokenUtil.unlockToken(tx, tokenContract, inIndex, tokenInput.prevTokenTx, tokenInput.prevTokenOutputIndex, prevouts, checkScriptInputIndex, routeCheckTx, 0, nReceivers, senderPrivKey.publicKey, sig, 0, '00', 0, TokenProto.OP_TRANSFER)
+    const unlockingScript = TokenUtil.unlockToken(tx, tokenContract, inIndex, inIndex, tokenInput.prevTokenTx, tokenInput.prevTokenOutputIndex, prevouts, checkScriptInputIndex, routeCheckTx, 0, nReceivers, toHex(senderPrivKey.publicKey), toHex(sig), 0, '00', 0, TokenProto.OP_TRANSFER)
     tx.inputs[inIndex].setScript(unlockingScript)
   }
 

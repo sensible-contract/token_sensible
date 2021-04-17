@@ -3,6 +3,9 @@ import "txUtil.scrypt";
 
 library TokenProto {
 
+  static int OP_TRANSFER = 1;
+  static int OP_UNLOCK_FROM_CONTRACT = 2;
+
   // flag is sensible
   static bytes PROTO_FLAG = b'73656e7369626c65';
   static int PROTO_TYPE = 1;

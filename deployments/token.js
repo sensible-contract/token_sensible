@@ -15,9 +15,9 @@ const TokenProto = require('./TokenProto');
 const Common = require('./common')
 const TokenUtil = require('./tokenUtil')
 
-const utxo1 =  '85f735b7aaf74605d858aed887e8b17d4c1968227a5a4de6310e533f6d4e016b'
-const outIndex1 = 1
-const bsvBalance1 = 9984454
+const utxo1 =  'd4643990952233445403f5ec050e96f491702fb60cb9b704009d50358e589f69'
+const outIndex1 = 3
+const bsvBalance1 = 9927270
 
 const dustLimit = 546
 
@@ -99,7 +99,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex, tokenContract)
 
   let bsvFeeTx = tokenTx
   let bsvFeeOutputIndex = tokenTx.outputs.length - 1
-  const [routeCheck, routeCheckTx] = TokenUtil.createRouteCheckTx(bsvFeeTx, bsvFeeOutputIndex, privateKey, dustLimit, fee, address1, tokenOutputArray, tokenID, tokenCodeHash)
+  const [routeCheck, routeCheckTx] = TokenUtil.createRouteCheckTx(bsvFeeTx, bsvFeeOutputIndex, privateKey, dustLimit, fee, address1, 1, tokenOutputArray, tokenID, tokenCodeHash)
 
   fee = 30000
   const changeAddress = address1

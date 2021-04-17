@@ -2,13 +2,12 @@ import "util.scrypt";
 import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
 
-// opreturn + receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenContractCodeHash +  tokenID
+// opreturn nSenders(4 bytes) + receiverTokenAmountArray + receiverArray + nReceivers(4 bytes) + tokenCodeHash + tokenID
 contract TokenRouteCheck {
   int[3] rabinPubKeyArray;
     
   public function unlock(
     SigHashPreimage txPreimage,
-    int nSenders,
     bytes tokenScript,
     bytes prevouts,
     bytes rabinMsgArray,
@@ -36,13 +35,15 @@ contract TokenRouteCheck {
     require(tokenCodeHash == TokenProto.getContractCodeHash(tokenScript, tokenScriptLen));
     require(tokenID == TokenProto.getTokenID(tokenScript, tokenScriptLen));
 
-    int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 1: scriptLen - pos]);
-    pos += 1;
+    int nReceivers = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 4: scriptLen - pos]);
+    pos += 4;
 
     bytes receiverArray = scriptCode[scriptLen - pos - nReceivers * TokenProto.TOKEN_ADDRESS_LEN: scriptLen - pos];
     pos += nReceivers * TokenProto.TOKEN_ADDRESS_LEN;
 
     bytes receiverTokenAmountArray = scriptCode[scriptLen - pos - nReceivers * TokenProto.TOKEN_AMOUNT_LEN: scriptLen - pos];
+    pos += nReceivers * TokenProto.TOKEN_AMOUNT_LEN;
+    int nSenders = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 4: scriptLen - pos]);
 
     int i = 0;
     int sumInputToken = 0;

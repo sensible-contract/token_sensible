@@ -114,7 +114,18 @@ token合约生成后，需要设置token的data字段。
 contract TokenRouteCheck {
   int[3] rabinPubKeyArray;
 ```
-还需要为合约设置opreturn的data，具体内容为 receiverTokenAmountArray + receiverArray + nReceivers(1 bytes) + tokenContractCodeHash +  tokenID。tokenContractCodeHash是token合约去除掉data部分后的sha256ripemd160 hash值。
+还需要为合约设置opreturn的data，具体内容为
+```
+ [
+  nSenders（4 bytes）
+  receiverTokenAmountArray
+  receiverArray
+  nReceivers(4 bytes)
+  tokenCodeHash
+  tokenID
+ ]
+ ```
+ tokenContractCodeHash是token合约去除掉data部分后的sha256ripemd160 hash值。
 
 ### **3.2 创建routeCheck tx**
 
@@ -133,7 +144,6 @@ contract TokenRouteCheck {
 ```
 public function unlock(
     SigHashPreimage txPreimage,
-    int nSenders,
     bytes tokenScript,
     bytes prevouts,
     bytes rabinMsgArray,
@@ -148,7 +158,6 @@ public function unlock(
   ) {
 ```
 >* txPreimage：preimage。
->* nSenders：tx的输入中token utxo的数量。
 >* tokenScript: 输入token utxo中任意一个输入的锁定脚本。
 >* prevouts：prevouts。
 >* rabinMsgArray：所有输入token的rabin msg array，按照token在tx中的输入顺序排列。这里使用的是第一种签名消息格式，对“某UTXO”签名。
@@ -167,6 +176,7 @@ public function unlock(
   // operation: 1 transfer, 2 unlockFromContract
   public function unlock(
     SigHashPreimage txPreimage,
+    int tokenInputIndex,
     bytes prevouts,
     bytes rabinMsg,
     bytes[2] rabinPaddingArray,
@@ -188,6 +198,7 @@ public function unlock(
 ```
 
 >* txPreimage: preimage。
+>* tokenInputIndex: token输入中的第几个，从0开始计数。
 >* prevouts: prevouts。
 >* rabinMsg: 对于自己的utxo的前一个交易的签名消息。这是使用的是第二种rabin消息签名格式。
 >* rabinPaddingArray：对于自己的rabin签名padding array。

@@ -83,7 +83,7 @@ function initContract() {
   Token = genContract('token', use_desc)
   RouteCheck = genContract('tokenRouteCheck', use_desc)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
-  TokenSell = genContract('tokenSell', true)
+  TokenSell = genContract('tokenSell', use_desc)
 }
 
 function createTokenGenesisContract() {

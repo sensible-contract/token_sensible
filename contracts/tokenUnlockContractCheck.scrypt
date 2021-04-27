@@ -5,6 +5,9 @@ import "rabinUtil.scrypt";
 // opreturn + inputTokenIndexArray + nSenders(4 bytes) + receiverTokenAmountArray + receiverArray + nReceivers(4 bytes) + tokenCodeHash + tokenID
 contract TokenUnlockContractCheck {
   int[3] rabinPubKeyArray;
+
+  static const int MAX_INPUT = 3;
+  static const int MAX_OUTPUT = 5;
     
   public function unlock(
     SigHashPreimage txPreimage,
@@ -53,9 +56,9 @@ contract TokenUnlockContractCheck {
     int sumInputToken = 0;
     int paddingPos = 0;
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
-    require(nSenders <= 3);
+    require(nSenders <= MAX_INPUT);
     // max support loop num input token
-    loop(3) {
+    loop(MAX_INPUT) {
       if (i < nSenders) {
         // verify rabin signature
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
@@ -103,14 +106,14 @@ contract TokenUnlockContractCheck {
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
     i = 0;
     int sumOutputToken = 0;
-    require(nOutputs <= 5);
     int tokenIndex = 0;
     int otherOutputIndex = 0;
     int tokenOutIndex = nOutputs + 1;
     if (nReceivers > 0) {
       tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[0: 4]);
     }
-    loop(5) {
+    require(nOutputs <= MAX_OUTPUT);
+    loop(MAX_OUTPUT) {
       if (i < nOutputs) {
         if (i == tokenOutIndex) {
           bytes address = receiverArray[tokenIndex * TokenProto.TOKEN_ADDRESS_LEN: (tokenIndex + 1) * TokenProto.TOKEN_ADDRESS_LEN];

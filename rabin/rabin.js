@@ -2,7 +2,6 @@
 A Rabin Signature JavaScript module adapted
 from: https://github.com/scrypt-sv/rabin/blob/master/rabin.py
 */
-const { toBigIntLE } = require('bigint-buffer');
 const { checkIfValidHexString,
     hexStringToBigInt,
     bigIntAbsoluteValue } = require('./utils');
@@ -11,6 +10,16 @@ try {
     crypto = require('crypto');
 } catch (err) {
     throw('Error: crypto support is disabled!');
+}
+
+function toBigIntLE(buf) {
+  const reversed = Buffer.from(buf);
+  reversed.reverse();
+  const hex = reversed.toString('hex');
+  if (hex.length === 0) {
+    return BigInt(0);
+  }
+  return BigInt(`0x${hex}`);
 }
     
 function greatestCommonDivisor(a, b) {

@@ -20,10 +20,10 @@ const{
   sign,
   } = require("../../rabin/rabin");
 
-const {toBufferLE} = require('bigint-buffer')
-
 const TokenProto = require('../../deployments/tokenProto')
 const TokenUtil = require('../../deployments/tokenUtil')
+const Common = require('../../deployments/common')
+const toBufferLE = Common.toBufferLE
 
 const utils = module.exports
 

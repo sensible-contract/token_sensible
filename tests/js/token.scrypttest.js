@@ -14,7 +14,6 @@ const {
   inputSatoshis,
   dummyTxId,
 } = require('../../helper');
-const {toBufferLE} = require('bigint-buffer')
 
 const {
     privateKey,
@@ -23,6 +22,8 @@ const {
 const Proto = require('../../deployments/protoheader')
 const TokenProto = require('../../deployments/tokenProto')
 const TokenUtil = require('../../deployments/tokenUtil');
+const Common = require('../../deployments/common')
+const toBufferLE = Common.toBufferLE
 
 const{
   sign,

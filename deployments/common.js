@@ -187,3 +187,20 @@ common.signP2PKH = function(tx, privKey, inputIndex) {
   const sig = tx.inputs[inputIndex].getSignatures(tx, privKey, inputIndex, sigtype, hashData)
   tx.inputs[inputIndex].addSignature(tx, sig[0])
 }
+
+common.toBufferLE = function(num, width) {
+  const hex = num.toString(16);
+  const buffer = Buffer.from(hex.padStart(width * 2, '0').slice(0, width * 2), 'hex');
+  buffer.reverse();
+  return buffer;
+}
+
+common.toBigIntLE = function(buf) {
+  const reversed = Buffer.from(buf);
+  reversed.reverse();
+  const hex = reversed.toString('hex');
+  if (hex.length === 0) {
+    return BigInt(0);
+  }
+  return BigInt(`0x${hex}`);
+}

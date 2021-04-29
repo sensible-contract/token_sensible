@@ -15,12 +15,12 @@ const {
     loadDesc,
     compileContract
 } = require('../helper');
-const {toBufferLE} = require('bigint-buffer')
 
 const Rabin = require('../rabin/rabin')
 const Proto = require('./protoheader')
 const TokenProto = require('./tokenProto')
 const Common = require('./common')
+const toBufferLE = Common.toBufferLE
 
 const TokenUtil = module.exports
 

@@ -154,7 +154,8 @@ public function unlock(
     bytes inputTokenAmountArray,
     bytes receiverSatoshiArray,
     int changeSatoshis,
-    Ripemd160 changeAddress
+    Ripemd160 changeAddress,
+    bytes opReturnScript,
   ) {
 ```
 >* txPreimage：preimage。
@@ -169,6 +170,7 @@ public function unlock(
 >* receiverSatoshiArray：输出token的output satoshis。
 >* changeSatoshis: 找零satoshi。
 >* changeAddress：找零地址。
+>* opReturnScript：用于token转账中附带opreturn的输出，格式必须为 OP_FALSE OP_RETURN data，且输出satoshis为0。
 
 ### **token解锁**
 

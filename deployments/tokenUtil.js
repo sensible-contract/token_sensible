@@ -564,7 +564,8 @@ TokenUtil.unlockRouteCheck = function(
     new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(outputSatoshiArray.toString('hex')),
     changeSatoshis,
-    new Ripemd160(changeAddress.hashBuffer.toString('hex'))
+    new Ripemd160(changeAddress.hashBuffer.toString('hex')),
+    new Bytes('')
   )
   const txContext =  {
     tx: tx,

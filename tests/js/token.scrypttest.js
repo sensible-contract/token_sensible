@@ -297,7 +297,8 @@ function verifyRouteCheck(tx, rabinPubKeyIndexArray, prevouts, routeCheck, token
     new Bytes(inputTokenAmountArray.toString('hex')),
     new Bytes(receiverSatoshiArray.toString('hex')),
     changeSatoshi,
-    new Ripemd160(address1.hashBuffer.toString('hex'))
+    new Ripemd160(address1.hashBuffer.toString('hex')),
+    new Bytes('')
   ).verify(txContext)
   if (expected === true) {
     expect(result.success, result.error).to.be.true

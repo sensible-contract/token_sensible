@@ -49,19 +49,17 @@ contract TokenRouteCheck {
     pos += nReceivers * TokenProto.TOKEN_AMOUNT_LEN;
     int nSenders = Util.fromLEUnsigned(scriptCode[scriptLen - pos - 4: scriptLen - pos]);
 
-    int i = 0;
     int sumInputToken = 0;
     int paddingPos = 0;
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
     require(nSenders <= MAX_INPUT);
     // max support loop num input token
-    loop(MAX_INPUT) {
+    loop(MAX_INPUT): i {
       if (i < nSenders) {
-        int j = 0;
         // verify rabin signature
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
-        loop(2) {
+        loop(2): j {
           int pubIndex = rabinPubKeyIndexArray[j];
           int rabinPubKey = this.rabinPubKeyArray[pubIndex];
           int arrayIndex = i * 2 + j;
@@ -76,7 +74,6 @@ contract TokenRouteCheck {
           if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
             verifyCount += 1;
           }
-          j += 1;
         }
         require(verifyCount == 2);
 
@@ -91,16 +88,14 @@ contract TokenRouteCheck {
 
         sumInputToken = sumInputToken + amount;
       }
-      i = i + 1;
     }
     
     // check the outputs
     bytes outputs = b'';
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
-    i = 0;
     int sumOutputToken = 0;
     require(nReceivers <= MAX_OUTPUT);
-    loop(MAX_OUTPUT) {
+    loop(MAX_OUTPUT): i {
       if (i < nReceivers) {
         bytes address = receiverArray[i * TokenProto.TOKEN_ADDRESS_LEN: (i + 1) * TokenProto.TOKEN_ADDRESS_LEN];
         int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[i * TokenProto.TOKEN_AMOUNT_LEN: (i + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
@@ -110,7 +105,6 @@ contract TokenRouteCheck {
         bytes output = Util.buildOutput(outputScript, outputSatoshi);
         outputs = outputs + output;
       }
-      i = i + 1;
     }
     require(sumInputToken == sumOutputToken);
 

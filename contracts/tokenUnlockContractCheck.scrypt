@@ -51,20 +51,18 @@ contract TokenUnlockContractCheck {
     pos += 4;
     bytes inputTokenIndexArray = scriptCode[scriptLen - pos - 4 * nSenders: scriptLen - pos];
 
-    int i = 0;
     bool isBurn = true;
     int sumInputToken = 0;
     int paddingPos = 0;
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
     require(nSenders <= MAX_INPUT);
     // max support loop num input token
-    loop(MAX_INPUT) {
+    loop(MAX_INPUT): i {
       if (i < nSenders) {
         // verify rabin signature
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
-        int j = 0;
-        loop(2) {
+        loop(2): j {
           int pubIndex = rabinPubKeyIndexArray[j];
           int rabinPubKey = this.rabinPubKeyArray[pubIndex];
           int arrayIndex = i * 2 + j;
@@ -79,7 +77,6 @@ contract TokenUnlockContractCheck {
           if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
             verifyCount += 1;
           }
-          j += 1;
         }
         require(verifyCount == 2);
 
@@ -98,13 +95,11 @@ contract TokenUnlockContractCheck {
 
         sumInputToken = sumInputToken + amount;
       }
-      i = i + 1;
     }
     
     // check the outputs
     bytes outputs = b'';
     // max support loop num receiver, you can change this num, but will cause the contrac size increase. you can customize your output
-    i = 0;
     int sumOutputToken = 0;
     int tokenIndex = 0;
     int otherOutputIndex = 0;
@@ -113,7 +108,7 @@ contract TokenUnlockContractCheck {
       tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[0: 4]);
     }
     require(nOutputs <= MAX_OUTPUT);
-    loop(MAX_OUTPUT) {
+    loop(MAX_OUTPUT): i {
       if (i < nOutputs) {
         if (i == tokenOutIndex) {
           bytes address = receiverArray[tokenIndex * TokenProto.TOKEN_ADDRESS_LEN: (tokenIndex + 1) * TokenProto.TOKEN_ADDRESS_LEN];
@@ -133,13 +128,12 @@ contract TokenUnlockContractCheck {
           outputs += output;
           otherOutputIndex += 4 + outputLen;
           // check if other output is the same token output
-          bytes scriptCode = TxUtil.getScriptCodeFromOutput(output);
-          if (len(scriptCode) == tokenScriptLen) {
-            require(TokenProto.getTokenID(scriptCode, tokenScriptLen) != tokenID);
+          bytes script = TxUtil.getScriptCodeFromOutput(output);
+          if (len(script) == tokenScriptLen) {
+            require(TokenProto.getTokenID(script, tokenScriptLen) != tokenID);
           }
         }
       }
-      i = i + 1;
     }
     if (isBurn) {
       require(sumInputToken >= sumOutputToken);

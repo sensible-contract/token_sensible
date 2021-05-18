@@ -98,7 +98,7 @@ contract Token {
       // authorize
       require(hash160(senderPubKey) == senderAddress);
       require(checkSig(senderSig, senderPubKey));
-    } else if (operation == TokenProto.OP_UNLOCK_FROM_CONTRACT) {
+    } else {
       require(nReceivers >= 0);
       hashArray = this.unlockContractCodeHashArray;
 
@@ -114,8 +114,6 @@ contract Token {
 
         require(hash160(prevScriptCode) == contractHash);
       }
-    } else {
-      require(false);
     }
 
     bytes thisOutpoint = Util.outpoint(txPreimage);
@@ -123,7 +121,7 @@ contract Token {
     bool res = RabinUtil.verifySelfMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
-    res = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, checkScriptTxOutIndex, tokenID, tokenCodeHash, nReceivers, thisOutpoint, tokenInputIndex, operation);
-    require(res == true);
+    bool res2 = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, checkScriptTxOutIndex, tokenID, tokenCodeHash, nReceivers, thisOutpoint, tokenInputIndex, operation);
+    require(res2 == true);
   }
 }

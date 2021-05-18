@@ -34,11 +34,10 @@ library RabinUtil {
 
   static function verifyMsgThree(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[2] paddingArray, int[2] sigArray, int[2] rabinPubKeyIndexArray): int {
     int verifyCount = 0;
-    int i = 0;
     int paddingPos = 0;
 
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
-    loop(2) {
+    loop(2): i {
       int pubIndex = rabinPubKeyIndexArray[i];
       int rabinPubKey = rabinPubKeyArray[pubIndex];
       bytes padding = paddingArray[i];
@@ -47,7 +46,6 @@ library RabinUtil {
       if ((sig * sig) % rabinPubKey == h % rabinPubKey) {
           verifyCount = verifyCount + 1;
       }
-      i = i + 1;
     }
     return verifyCount;
   }
@@ -118,10 +116,9 @@ library RabinUtil {
     bytes inputScript,
     PayloadU4Data u4
     ): bool {
-    int i = 0;
     int verifyCount = 0;
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
-    loop(2) {
+    loop(2): i {
       int pubIndex = rabinPubKeyIndexArray[i];
       int rabinPubKey = rabinPubKeyArray[pubIndex];
       int rabinSig = rabinSigArray[i];
@@ -130,7 +127,6 @@ library RabinUtil {
       if ((rabinSig * rabinSig) % rabinPubKey == h % rabinPubKey) {
         verifyCount += 1;
       }
-      i += 1;
     }
     require(verifyCount == 2);
 

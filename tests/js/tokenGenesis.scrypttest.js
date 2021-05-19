@@ -116,6 +116,7 @@ function createToken(oracleData) {
     outputAmount,
     new Ripemd160(address1.hashBuffer.toString('hex')),
     0,
+    new Bytes('')
     ).verify(txContext)
   return result
 }
@@ -244,6 +245,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       outputAmount,
       new Ripemd160(address1.hashBuffer.toString('hex')),
       0,
+      new Bytes('')
       ).verify(txContext)
     expect(result.success, result.error).to.be.true
   });

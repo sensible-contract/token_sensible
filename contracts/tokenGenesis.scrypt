@@ -17,7 +17,8 @@ contract TokenGenesis {
     bytes tokenScript,
     int tokenSatoshis,
     Ripemd160 changeAddress,
-    int changeSatoshis
+    int changeSatoshis,
+    bytes opReturnScript
     ) {
 
     require(Tx.checkPreimage(txPreimage));
@@ -83,12 +84,20 @@ contract TokenGenesis {
       genesisOutput = Util.buildOutput(newGenesisScript, genesisSatoshis);
     }
     bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshis);
+
+    // op_false op_return output
+    bytes opReturnOutput = b'';
+    if (len(opReturnScript) > 0) {
+      require(opReturnScript[0:2] == b'006a');
+      opReturnOutput = Util.buildOutput(opReturnScript, 0);
+    }
+
     bytes changeOutput = b'';
     if (changeSatoshis > 0) {
       bytes changeScript = Util.buildPublicKeyHashScript(changeAddress);
       changeOutput = Util.buildOutput(changeScript, changeSatoshis);
     }
-    bytes hashOutput = hash256(genesisOutput + tokenOutput + changeOutput);
+    bytes hashOutput = hash256(genesisOutput + tokenOutput + opReturnOutput + changeOutput);
     require(hashOutput == Util.hashOutputs(txPreimage));
   }
 }

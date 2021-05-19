@@ -309,7 +309,8 @@ TokenUtil.createToken = function(
       new Bytes(tokenScript.toHex()),
       outputSatoshis,
       new Ripemd160(changeAddress.hashBuffer.toString('hex')),
-      changeSatoshis
+      changeSatoshis,
+      new Bytes('')
   ).toScript()
 
   //console.log('genesis unlocking args:', toHex(preimage), toHex(sig), lockingScript.toHex(), outputSatoshis)

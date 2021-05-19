@@ -89,7 +89,8 @@ token合约生成后，需要设置token的data字段。
     bytes tokenScript,
     int tokenSatoshis,
     Ripemd160 changeAddress,
-    int changeSatoshis
+    int changeSatoshis,
+    bytes opReturnScript
     ) {
 ```
 >* txPreimage: preimage
@@ -99,10 +100,11 @@ token合约生成后，需要设置token的data字段。
 >* rabinSigArray: 合约里面规定的rabin pubkey对上面的rabinMsg签名后的sig
 >* rabinPubKeyIndexArray: 传入的签名所对应的pubkey index。
 >* genesisSatoshis: 输出新的genesis合约的satoshis，如果填0，则不会输出新的genesis合约, 意味着此token合约放弃增发。
->* tokenScript: 输出token的lockingScript
->* tokenSatoshi: 输出token的satoshis
->* changeAddress: 找零的address
->* changeSatoshis：找零的satoshis
+>* tokenScript: 输出token的lockingScript。
+>* tokenSatoshi: 输出token的satoshis。
+>* changeAddress: 找零的address。
+>* changeSatoshis：找零的satoshis。
+>* opReturnScript：用于创建token的交易中附带opreturn的输出，格式必须为 OP_FALSE OP_RETURN data，且输出satoshis为0。
 
 ## **3 token转账**
 
@@ -170,7 +172,7 @@ public function unlock(
 >* receiverSatoshiArray：输出token的output satoshis。
 >* changeSatoshis: 找零satoshi。
 >* changeAddress：找零地址。
->* opReturnScript：用于token转账中附带opreturn的输出，格式必须为 OP_FALSE OP_RETURN data，且输出satoshis为0。
+>* opReturnScript：用于token转账的交易中附带opreturn的输出，格式必须为 OP_FALSE OP_RETURN data，且输出satoshis为0。
 
 ### **token解锁**
 

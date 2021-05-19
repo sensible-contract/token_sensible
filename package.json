@@ -1,7 +1,7 @@
 {
-  "name": "scrypt_boilerplate",
+  "name": "token_sensible",
   "version": "0.2.0",
-  "description": "sCrypt project boilerplate",
+  "description": "sensible token contract",
   "main": "",
   "engines": {
     "node": ">=12.0.0"
@@ -15,16 +15,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scrypt-sv/boilerplate.git"
+    "url": "git+https://github.com/sensible-contract/token_sensible.git"
   },
   "keywords": [
     "sCrypt",
-    "testing",
+    "token",
     "Smart Contract",
     "bitcoin",
     "bitcoin-sv"
   ],
-  "author": "sCrypt Inc",
+  "author": "sensible group",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.21.1",

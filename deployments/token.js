@@ -15,9 +15,9 @@ const TokenProto = require('./TokenProto');
 const Common = require('./common')
 const TokenUtil = require('./tokenUtil')
 
-const utxo1 =  'd4643990952233445403f5ec050e96f491702fb60cb9b704009d50358e589f69'
-const outIndex1 = 3
-const bsvBalance1 = 9927270
+const utxo1 =  'd519c49ac4ccf9e98b04f75e67742df03c3f2ba3adae82de46321db28f2f5256'
+const outIndex1 = 1
+const bsvBalance1 = 10220795
 
 const dustLimit = 546
 
@@ -45,9 +45,7 @@ function createNewToken() {
   let genesisScript = genesisTx.outputs[0].script
   let inputAmount = genesisTx.outputs[0].satoshis
 
-  const rabinMsg = Buffer.alloc(1, 0)
-  const rabinPaddingArray = [new Bytes('00'), new Bytes('00')]
-  const rabinSigArray = [0, 0]
+  const [rabinMsg, rabinPaddingArray, rabinSigArray] = Common.createRabinMsg(utxo1, outIndex1, bsvBalance1, genesisScript.toBuffer(), genesisTx.id)
   fee = 10000
   const utxo2 = genesisTx.id
   const outIndex2 = genesisTx.outputs.length - 1

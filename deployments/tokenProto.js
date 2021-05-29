@@ -4,8 +4,8 @@ const {bsv} = require('scryptlib')
 const token = module.exports
 
 // token specific
-//<type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <tokenid(36 bytes)> + <proto header>
-const TOKEN_ID_LEN = 36
+//<type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <tokenid(20 bytes)> + <proto header>
+const TOKEN_ID_LEN = 20
 const TOKEN_AMOUNT_LEN = 8
 const TOKEN_ADDRESS_LEN = 20
 const DECIMAL_NUM_LEN = 1
@@ -101,15 +101,6 @@ token.getNewTokenScriptFromGenesis = function(scriptBuf, addressBuf, tokenAmount
     decimalBuf,
     addressBuf,
     amountBuf,
-    tokenID,
-    scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
-  ])
-  return newScript
-}
-
-token.getNewGenesisScript = function(scriptBuf, tokenID) {
-  const newScript = Buffer.concat([
-    scriptBuf.subarray(0, scriptBuf.length - TOKEN_ID_OFFSET),
     tokenID,
     scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
   ])

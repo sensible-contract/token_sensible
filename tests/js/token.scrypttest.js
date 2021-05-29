@@ -721,7 +721,7 @@ describe('Test token contract unlock In Javascript', () => {
   })
 
   it('should succeed when token is generated from genesis', () => {
-    simpleRouteUnlock(dummyTxId, 0, Buffer.alloc(20))
+    simpleRouteUnlock(dummyTxId, 0, genesisScriptBuf)
     simpleRouteUnlock(dummyTxId, 1, genesisScriptBuf)
   })
 

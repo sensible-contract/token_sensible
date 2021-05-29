@@ -768,6 +768,17 @@ describe('Test token contract unlock In Javascript', () => {
     unlockFromContract(2, 0, 1, args)
   });
 
+  it('it should failed when try to take burning address token', () => {
+    const [tokenSell, tokenSellTx] = createTokenSellContract(10000)
+    const scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(tokenSell.lockingScript.toBuffer()))
+    const args = {
+      tokenExpected: [true, true],
+      checkExpected: false,
+      scriptHash: [Buffer.alloc(20, 0), scriptHash]
+    }
+    unlockFromContract(2, 1, 1, args)
+  });
+
   it('it should failed when unlock from contract with wrong lockContractTx', () => {
     const args = {
       tokenExpected: false,

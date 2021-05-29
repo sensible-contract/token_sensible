@@ -52,6 +52,7 @@ contract TokenUnlockContractCheck {
     bytes inputTokenIndexArray = scriptCode[scriptLen - pos - 4 * nSenders: scriptLen - pos];
 
     bool isBurn = true;
+    bool hasBurningAddress = false;
     int sumInputToken = 0;
     int paddingPos = 0;
     require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
@@ -87,6 +88,8 @@ contract TokenUnlockContractCheck {
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
         if (address != b'0000000000000000000000000000000000000000') {
           isBurn = false;
+        } else {
+          hasBurningAddress = true;
         }
         int amount = Util.fromLEUnsigned(inputTokenAmountArray[i * 8: (i + 1) * 8]);
         bytes lockingScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, amount);
@@ -136,8 +139,9 @@ contract TokenUnlockContractCheck {
       }
     }
     if (isBurn) {
-      require(sumInputToken >= sumOutputToken);
+      require(sumOutputToken == 0);
     } else {
+      require(hasBurningAddress == false);
       require(sumInputToken == sumOutputToken);
     }
     bytes hashOutputs = hash256(outputs);

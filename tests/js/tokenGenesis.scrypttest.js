@@ -29,8 +29,6 @@ const{ generatePrivKey,
 
 const Proto = require('../../deployments/protoheader')
 const TokenProto = require('../../deployments/tokenProto')
-const common = require('../../deployments/common')
-const Utils = require("./utils")
 
 const rabinPrivateKey = {
   "p": 5757440790098238249206056886132360783939976756626308615141839695681752813612764520921497694519841722889028334119917789649651692480869415368298368200263n,
@@ -66,7 +64,7 @@ const unlockContractCodeHashArray = routeCheckCodeHashArray
 let genesisHash
 const tokenID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
-  common.getUInt32Buf(0),
+  Buffer.alloc(4, 0),
 ])
 
 let genesis, result, genesisScript
@@ -102,7 +100,9 @@ function createToken(oracleData) {
     inputSatoshis: inputAmount
   }
 
-  const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, 0, inputSatoshis, scriptBuf, dummyTxId)
+  let rabinMsg = Buffer.alloc(1, 0)
+  let rabinPaddingArray = [new Bytes('00'), new Bytes('00')]
+  let rabinSigArray = [0, 0]
 
   result = genesis.unlock(
     new SigHashPreimage(toHex(preimage)), 
@@ -132,7 +132,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       Buffer.alloc(20, 0), // address
       Buffer.alloc(8, 0), // token value
-      tokenID, // tokenID
+      Buffer.alloc(36, 0), // script code hash
       tokenType, // type
       PROTO_FLAG
     ])

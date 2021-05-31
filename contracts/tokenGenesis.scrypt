@@ -39,6 +39,11 @@ contract TokenGenesis {
     int tokenValue = TokenProto.getTokenAmount(genesisScript, dataLen);
     require(tokenValue == 0);
     bytes tokenID = TokenProto.getTokenID(genesisScript, dataLen);
+    bool isFirst = false;
+    if (tokenID == b'000000000000000000000000000000000000000000000000000000000000000000000000') {
+      isFirst = true;
+      tokenID = Util.outpoint(txPreimage);
+    } 
     int protoType = TokenProto.getProtoType(genesisScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
     bytes flag = TokenProto.getProtoFlag(genesisScript, dataLen);
@@ -48,13 +53,15 @@ contract TokenGenesis {
     require(TokenProto.checkOpReturn(genesisScript, dataLen));
 
     // check the rabin msg
-    bytes thisOutpoint = Util.outpoint(txPreimage);
-    int verifyCount = RabinUtil.verifyMsgThree(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray);
-    require(verifyCount == 2);
+    if (!isFirst) {
+      bytes thisOutpoint = Util.outpoint(txPreimage);
+      int verifyCount = RabinUtil.verifyMsgThree(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray);
+      require(verifyCount == 2);
 
-    PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
-    require(pl.byTxId == thisOutpoint[ : 32]);
-    require(pl.outpoint == tokenID || hash160(genesisScript) == pl.scriptHash);
+      PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
+      require(pl.byTxId == thisOutpoint[ : 32]);
+      require(pl.outpoint == tokenID || hash160(genesisScript) == pl.scriptHash);
+    }
 
     // check tokenScript oracle data
     dataLen = len(tokenScript);

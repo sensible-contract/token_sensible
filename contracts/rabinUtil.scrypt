@@ -79,7 +79,7 @@ library RabinUtil {
     return self;
   }
 
-  static function verifySelfMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[2] paddingArray, int[2] sigArray, int[2] rabinPubKeyIndexArray, bytes thisOutpoint, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
+  static function verifySelfMsg(int[3] rabinPubKeyArray, bytes rabinMsg, bytes[2] paddingArray, int[2] sigArray, int[2] rabinPubKeyIndexArray, bytes thisOutpoint, bytes tokenID, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
     int verifyCount = RabinUtil.verifyMsgThree(rabinPubKeyArray, rabinMsg, paddingArray, sigArray, rabinPubKeyIndexArray);
     require(verifyCount == 2);
 
@@ -89,12 +89,16 @@ library RabinUtil {
 
     bool matchGenesis = false;
 
-    if (pl.scriptHash == genesisHash) {
+    if (pl.outpoint == tokenID) {
       matchGenesis = true;
     } else {
-      bytes newScript = TokenProto.getNewTokenScript(script, len(script), tokenAddress, tokenAmount);
-      if (hash160(newScript) == pl.scriptHash) {
+      if (pl.scriptHash == genesisHash) {
         matchGenesis = true;
+      } else {
+        bytes newScript = TokenProto.getNewTokenScript(script, len(script), tokenAddress, tokenAmount);
+        if (hash160(newScript) == pl.scriptHash) {
+          matchGenesis = true;
+        }
       }
     }
 

@@ -12,7 +12,7 @@ library TokenProto {
   // <type specific data> + <proto header>
   // <proto header> = <type(4 bytes)> + <'sensible'(8 bytes)>
   //<token type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimailNum(1 byte)> + <address(20 bytes)> + <token amount(8 bytes)> + <tokenid(20 bytes)>
-  static int TOKEN_ID_LEN = 20;
+  static int TOKEN_ID_LEN = 36;
   static int TOKEN_AMOUNT_LEN = 8;
   static int TOKEN_ADDRESS_LEN = 20;
   static int DECIMAL_NUM_LEN = 1;
@@ -105,4 +105,7 @@ library TokenProto {
     return tokenCode + codeHash + tokenName + b'00' + decimalNum + tokenAddress + Util.toLEUnsigned(tokenAmount, 8) + tokenID + Util.toLEUnsigned(TokenProto.PROTO_TYPE, 4) + TokenProto.PROTO_FLAG;
   }
 
+  static function getNewGenesisScript(bytes script, int slen, bytes tokenID): bytes {
+    return script[: slen - TokenProto.TOKEN_ID_OFFSET] + tokenID + script[slen - TokenProto.TYPE_OFFSET: ];
+  }
 }

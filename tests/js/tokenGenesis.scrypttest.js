@@ -63,12 +63,8 @@ const routeCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
 const routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
 const unlockContractCodeHash = routeCheckCodeHash
 const unlockContractCodeHashArray = routeCheckCodeHashArray
-let tokenID
-/*const tokenID = Buffer.concat([
-  Buffer.from(dummyTxId, 'hex').reverse(),
-  common.getUInt32Buf(0),
-])*/
-const originID = Buffer.concat([
+let genesisHash
+const tokenID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
   common.getUInt32Buf(0),
 ])
@@ -78,12 +74,14 @@ let genesis, result, genesisScript
 function createToken(oracleData) {
   // add genesis output
   const scriptBuf = genesisScript.toBuffer()
+  const newScriptBuf = TokenProto.getNewGenesisScript(scriptBuf, tokenID)
+  genesisHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(newScriptBuf)).toString('hex')
   tx.addOutput(new bsv.Transaction.Output({
-    script: bsv.Script.fromBuffer(scriptBuf),
+    script: bsv.Script.fromBuffer(newScriptBuf),
     satoshis: outputAmount
   }))
 
-  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray)
+  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   token.setDataPart(oracleData.toString('hex'))
   const lockingScript = token.lockingScript
   tx.addOutput(new bsv.Transaction.Output({
@@ -126,7 +124,7 @@ function createToken(oracleData) {
 describe('Test genesis contract unlock In Javascript', () => {
 
   beforeEach(() => {
-    genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray, new Bytes(originID.toString('hex')))
+    genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
     const oracleData = Buffer.concat([
       tokenName,
       tokenSymbol,
@@ -134,15 +132,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       Buffer.alloc(20, 0), // address
       Buffer.alloc(8, 0), // token value
-      Buffer.alloc(20, 0),
+      tokenID, // tokenID
       tokenType, // type
       PROTO_FLAG
     ])
     genesis.setDataPart(oracleData.toString('hex'))
 
     genesisScript = genesis.lockingScript
-
-    tokenID = Buffer.from(bsv.crypto.Hash.sha256ripemd160(genesisScript.toBuffer()))
 
     tx = new bsv.Transaction()
     tx.addInput(new bsv.Transaction.Input({
@@ -183,7 +179,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       satoshis: outputAmount
     }))
 
-    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray)
+    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
     token.setDataPart(oracleData.toString('hex'))
     const lockingScript = token.lockingScript
     tx.addOutput(new bsv.Transaction.Output({
@@ -204,10 +200,27 @@ describe('Test genesis contract unlock In Javascript', () => {
       inputSatoshis: outputAmount
     }
 
+    const satoshiBuf = Buffer.alloc(8, 0)
+    satoshiBuf.writeBigUInt64LE(BigInt(inputAmount))
     const scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(genesisScript.toBuffer()))
-    const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, 0, inputSatoshis, scriptHash, prevTx.id)
+    let rabinMsg = Buffer.concat([
+      tokenID,
+      satoshiBuf,
+      scriptHash,
+      Buffer.from([...Buffer.from(prevTx.id, 'hex')].reverse()),
+    ])
+    const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
+    //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
+    const rabinSign = rabinSignResult.signature
+    const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
+    let rabinPaddingArray = []
+    let rabinSigArray = []
+    for (let i = 0; i < 2; i++) {
+      rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
+      rabinSigArray.push(rabinSign)
+    }
 
-    genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray, new Bytes(originID.toString('hex')))
+    const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
     oracleData = Buffer.concat([
       tokenName,
       tokenSymbol,
@@ -215,7 +228,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       Buffer.alloc(20, 0), // address
       Buffer.alloc(8, 0), // token value
-      Buffer.alloc(20, 0),
+      tokenID,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -345,7 +358,6 @@ describe('Test genesis contract unlock In Javascript', () => {
     const result = createToken(oracleData)
     expect(result.success, result.error).to.be.false
   });
-
   it('should failed when get wrong tokenType', () => {
     const oracleData = Buffer.concat([
       tokenName,

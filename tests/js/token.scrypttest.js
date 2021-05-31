@@ -57,17 +57,19 @@ const PROTO_FLAG = Proto.PROTO_FLAG
 
 const address1 = privateKey.toAddress()
 const address2 = privateKey2.toAddress()
-const originID = Buffer.concat([
-  Common.getTxIdBuf(dummyTxId),
-  Common.getUInt32Buf(0),
+const tokenID = Buffer.concat([
+  TokenUtil.getTxIdBuf(dummyTxId),
+  TokenUtil.getUInt32Buf(0)
 ])
-let tokenID
-const tokenID2 = Buffer.alloc(20, 0)
-tokenID2.write('2testTokenID2')
+const tokenID2 = Buffer.concat([
+  TokenUtil.getTxIdBuf(dummyTxId),
+  TokenUtil.getUInt32Buf(1)
+])
 const decimalNum = TokenUtil.getUInt8Buf(8)
 
 let routeCheckCodeHashArray
 let unlockContractCodeHashArray
+let genesisHash
 let genesisScriptBuf
 let tokenCodeHash
 
@@ -87,7 +89,7 @@ function initContract() {
 
 function createTokenGenesisContract() {
   const issuerPubKey = privateKey.publicKey
-  const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray, new Bytes(originID.toString('hex')))
+  const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
   const oracleData = Buffer.concat([
     tokenName,
     tokenSymbol,
@@ -95,7 +97,7 @@ function createTokenGenesisContract() {
     decimalNum,
     Buffer.alloc(20, 0), // address
     Buffer.alloc(8, 0), // token value
-    Buffer.alloc(20, 0),
+    tokenID,
     tokenType,
     PROTO_FLAG
   ])
@@ -104,11 +106,6 @@ function createTokenGenesisContract() {
 }
 
 function initContractHash() {
-  const genesis = createTokenGenesisContract()
-  genesisScriptBuf = genesis.lockingScript.toBuffer()
-  tokenID = bsv.crypto.Hash.sha256ripemd160(genesisScriptBuf)
-  //console.log("tokenID:", tokenID)
-
   const routeCheckCode = new RouteCheck(rabinPubKeyArray)
   let code = routeCheckCode.lockingScript.toBuffer()
   const routeCheckCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
@@ -119,13 +116,18 @@ function initContractHash() {
   const unlockContractCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
   unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
 
-  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray)
+  const genesis = createTokenGenesisContract()
+  genesisScriptBuf = genesis.lockingScript.toBuffer()
+  genesisHash = bsv.crypto.Hash.sha256ripemd160(genesisScriptBuf).toString('hex')
+  //console.log("genesisHash:", genesisHash)
+
+  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   code = tokenContract.lockingScript.toBuffer()
   tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(code)
 }
 
 function createTokenContract(addressBuf, amount) {
-  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray)
+  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   const data = Buffer.concat([
     tokenName,
     tokenSymbol,
@@ -133,7 +135,7 @@ function createTokenContract(addressBuf, amount) {
     decimalNum,
     addressBuf,
     TokenUtil.getUInt64Buf(amount),
-    tokenID,
+    Buffer.from(tokenID, 'hex'),
     tokenType,
     PROTO_FLAG
   ])

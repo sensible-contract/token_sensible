@@ -4,16 +4,14 @@
 
 ### **1.1 生成genesis的合合约**
 
-创建genesis合约需要三个参数。
+创建genesis合约需要两个参数。
 ```
 contract TokenGenesis {
   PubKey pubKey;
   int[3] rabinPubKeyArray;
-  bytes originOutPoint;
 ```
 >* pubKey，是发行者的公钥，创建token时需要使用对应的私钥对合约进行解锁。
 >* rabinPubKeyArray，需要填入三个不同的rabin pubkey，后面解锁是需要至少两个pubkey对应的签名消息。
->* originOutPoint，是首次创建genesis合约时tx的input 0的outpoint。
 
 此外，还需要给TokenGenesis增加opreturn的数据，此数据为ft的定义标准数据。
 
@@ -32,9 +30,9 @@ token的数据格式定义
 >* Token Symbol, tokne的简称，10字节。 
 >* Genesis flag是一个1字节的unsigned int，若等于1表示其为genesis合约，用于创建token。等于0则为普通token合约。
 >* Decimal num，是1字节的unsigned int，用于表示token amount的小数位。 
->* Token address使用和bsv legacal address一样的数据格式，保持和bsv转账的一致性。同时也支持script hash。如果是Genesis合约，则为全0。
->* Token amount是一个8字节的小端存储的unsigned int, 代表token的数量。如果是Genesis合约，则为全0。
->* TokenID长度为20字节，是hash160(genesisScript)。用来标识不同的token。如果是Genesis合约，则为全0。
+>* Token address使用和bsv legacal address一样的数据格式，保持和bsv转账的一致性。同时也支持script hash。 
+>* Token amount是一个8字节的小端存储的unsigned int, 代表token的数量。 
+>* TokenID长度为36字节，是第一次生成的genesis utxo的outputpoint。用来标识不同的token。
 
 ### **Rabin Msg 格式**
 
@@ -47,23 +45,25 @@ rabin的签名方式可以参见[satotx](https://github.com/sensing-contract/sat
 
 ![image](imgs/genesis_tx.png)
 
-将genesis合约的锁定脚本作为tx一个输出的script，生成一个tx。tokenID也就确定为此输出的outputpoint。可在测试网上查看此类型[tx实例](https://test.whatsonchain.com/tx/e0807f94d80da76bbef2efbe0d6244f2c8132ebe8d403006bbcdd9032a184e9a)。
+将genesis合约的锁定脚本作为tx一个输出的script，生成一个tx。tokenID也就确定为此输出的outputpoint。可在测试网上查看此类型[tx实例](https://test.whatsonchain.com/tx/f89053a1997e70412f455f72a02e76dba289608577505fff359d7ea62c7ba4eb)。
 
 ## **2 发行Token**
 
 ### **2.1 创建token合约**
 
-token合约创建需要三个参数：
+token合约创建需要四个参数：
 ```
 contract Token {
   int[3] rabinPubKeyArray;
   bytes[3] routeContractCodeHashArray;
   bytes[3] unlockContractCodeHashArray;
+  bytes genesisContractHash
 ```
 
 >* rabinPubkeyArray，与genesis合约里面用的参数一样。
 >* routeContractCodeHashArray: 一个合约代码hash的数组，routeContract是用来转账时对输入输出的token数量进行检查。这里支持5种不同的合约，可以对于不同的输入输出使用不同的检查脚本，比如3输入3输入，6输入6输出，10输入10输出，20输入3输出，3输入20输出5种不同类型的合约，在合约转账时可以根据具体的需求，来选择生成不同的合约，能够灵活支持大规模的转账，同时控制token合约的size。
 >* unlockContractCodeHashArray: 类似与routeContractCodeHashArray, 是在unlockFromContract时用于检查token输入输出数量是否匹配。需要注意的是，unlockFromContract在检查输入输出事，输入检查的是token输入数量，输出检查的是所有的输出包括非token的输出。因此tokenUnlockContractCheck合约里面的输出数量的限制，是该交易的所有输出数量的限制。
+>* genesisContractHash: 是genesis合约的hash，用于增发时检测增发行为是否合法。在第一步生成genesis utxo的lockingScript，将其中的tokenID数据区段用真正的tokenID替换得到新的newLockingScript，然后使用sha256ripemd160(newLockingScript)得到hash值。
 
 token合约生成后，需要设置token的data字段。
 
@@ -71,7 +71,7 @@ token合约生成后，需要设置token的data字段。
 
 ![image](imgs/token_tx.png)
 
-将第一步生成的genesis utxo作为输入，生成新的genesis utxo，以及新的token utxo。新的Genesis'是用于之后增发新的token，如果不需要增发，则可以选择不输出Genesis'。可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/8c766d4600e044de3eed9f4502e144c23c72d00f1797de0e7a78b10e628b445c)。
+将第一步生成的genesis utxo作为输入，生成新的genesis utxo，以及新的token utxo。新的Genesis'是用于之后增发新的token，如果不需要增发，则可以选择不输出Genesis'。可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/8b4c8f101451e9a958e442d77d283cb82c218c2e36966adf01559a92c146d86f)。
 
 ### **genesis合约解锁**
 
@@ -131,7 +131,7 @@ contract TokenRouteCheck {
 
 ### **3.2 创建routeCheck tx**
 
-将创建的routeCheck合约的lockingScript放入一个输出的script中。可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/e1eefef1d931d6befb8632886d14e74dfc87416c2c83080e020d87d562c60829)。
+将创建的routeCheck合约的lockingScript放入一个输出的script中。可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/e321d5ea44edb99231a7eb67fde664cd0a8e402d3c89ce9fc090eb2284e23646)。
 
 ![image](imgs/token_route_check_tx.png)
 
@@ -139,7 +139,7 @@ contract TokenRouteCheck {
 
 ![image](imgs/token_transfer_tx.png)
 
-将需要转账的token作为输入，注意token输入必须是从input 0开始，然后连续排列。同时用3.2得到的routeCheck utxo也作为其中一个输入，注意其必须是放在input的最后，然后输出token以及找零的utxo可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/a44762845637fe824a56e829f471c861feb69dbe5d10d2a23335539d6123d8ef)。
+将需要转账的token作为输入，注意token输入必须是从input 0开始，然后连续排列。同时用3.2得到的routeCheck utxo也作为其中一个输入，注意其必须是放在input的最后，然后输出token以及找零的utxo可在测试网查看此类型[tx实例](https://test.whatsonchain.com/tx/d4643990952233445403f5ec050e96f491702fb60cb9b704009d50358e589f69)。
 
 ### **routeCheck解锁**
 

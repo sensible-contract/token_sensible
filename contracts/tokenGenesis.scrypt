@@ -5,7 +5,6 @@ import "rabinUtil.scrypt";
 contract TokenGenesis {
   PubKey pubKey;
   int[3] rabinPubKeyArray;
-  bytes originOutPoint;
 
   public function unlock(
     SigHashPreimage txPreimage,
@@ -30,7 +29,6 @@ contract TokenGenesis {
     // check input script oracle data
     bytes genesisScript = Util.scriptCode(txPreimage);
     int dataLen = len(genesisScript);
-    bytes tokenID = hash160(genesisScript);
     bytes tokenName = TokenProto.getTokenName(genesisScript, dataLen);
     bytes tokenSymbol = TokenProto.getTokenSymbol(genesisScript, dataLen);
     int isGenesis = TokenProto.getGenesisFlag(genesisScript, dataLen);
@@ -40,7 +38,7 @@ contract TokenGenesis {
     require(address == b'0000000000000000000000000000000000000000');
     int tokenValue = TokenProto.getTokenAmount(genesisScript, dataLen);
     require(tokenValue == 0);
-    require(TokenProto.getTokenID(genesisScript, dataLen) == b'0000000000000000000000000000000000000000');
+    bytes tokenID = TokenProto.getTokenID(genesisScript, dataLen);
     int protoType = TokenProto.getProtoType(genesisScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
     bytes flag = TokenProto.getProtoFlag(genesisScript, dataLen);
@@ -56,7 +54,7 @@ contract TokenGenesis {
 
     PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
     require(pl.byTxId == thisOutpoint[ : 32]);
-    require(pl.outpoint == this.originOutPoint || hash160(genesisScript) == pl.scriptHash);
+    require(pl.outpoint == tokenID || hash160(genesisScript) == pl.scriptHash);
 
     // check tokenScript oracle data
     dataLen = len(tokenScript);
@@ -75,7 +73,8 @@ contract TokenGenesis {
 
     bytes genesisOutput = b'';
     if (genesisSatoshis > 0) {
-      genesisOutput = Util.buildOutput(genesisScript, genesisSatoshis);
+      bytes newGenesisScript = TokenProto.getNewGenesisScript(genesisScript, len(genesisScript), tokenID);
+      genesisOutput = Util.buildOutput(newGenesisScript, genesisSatoshis);
     }
     bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshis);
 

@@ -10,6 +10,7 @@ contract Token {
   int[3] rabinPubKeyArray;
   bytes[5] routeContractCodeHashArray;
   bytes[5] unlockContractCodeHashArray;
+  bytes genesisContractHash;
 
   function verifyAmountCheckContract(
     bytes[5] contractCodeHashArray,
@@ -117,7 +118,7 @@ contract Token {
 
     bytes thisOutpoint = Util.outpoint(txPreimage);
     // verify rabin signature
-    bool res = RabinUtil.verifySelfMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray, thisOutpoint, tokenScript, tokenID, prevTokenAddress, prevTokenAmount);
+    bool res = RabinUtil.verifySelfMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray, thisOutpoint, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
     require(res == true);
 
     bool res2 = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, checkScriptTxOutIndex, tokenID, tokenCodeHash, nReceivers, thisOutpoint, tokenInputIndex, operation);

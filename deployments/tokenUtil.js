@@ -47,6 +47,7 @@ const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_
 let genesisContract
 let routeCheckCodeHashArray
 let unlockContractCodeHashArray
+let genesisHash
 
 TokenUtil.getUInt8Buf = Common.getUInt8Buf
 TokenUtil.getUInt16Buf = Common.getUInt16Buf
@@ -68,8 +69,8 @@ TokenUtil.initContractHash = function(rabinPubKeyArray) {
   unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
 }
 
-TokenUtil.createTokenContract = function(oracleData) {
-  const tokenContract = new Token(Common.rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray)
+TokenUtil.createTokenContract = function(genesisHash, oracleData) {
+  const tokenContract = new Token(Common.rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
   tokenContract.setDataPart(oracleData.toString('hex'))
   return tokenContract
 }
@@ -108,11 +109,7 @@ TokenUtil.createGenesis = function(
   ) {
   const decimalBuf = Buffer.alloc(1, 0)
   decimalBuf.writeUInt8(decimalNum)
-  const originOutPoint = Buffer.concat([
-    Common.getTxIdBuf(inputTxId),
-    Common.getUInt32Buf(inputTxIndex),
-  ])
-  const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray, new Bytes(originOutPoint.toString('hex')))
+  const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
   console.log('genesis create args:', toHex(issuerPubKey), tokenName.toString('hex'), decimalNum)
   const oracleData = Buffer.concat([
     tokenName,
@@ -121,7 +118,7 @@ TokenUtil.createGenesis = function(
     decimalBuf,
     Buffer.alloc(20, 0), // address
     Buffer.alloc(8, 0), // token value
-    Buffer.alloc(20, 0), // tokenID
+    Buffer.alloc(36, 0), // tokenID
     tokenType, // type
     PROTO_FLAG
   ])
@@ -214,9 +211,25 @@ TokenUtil.createToken = function(
   const tokenName = TokenProto.getTokenName(scriptBuffer)
   const tokenSymbol = TokenProto.getTokenSymbol(scriptBuffer)
 
-  const tokenID = bsv.crypto.Hash.sha256ripemd160(scriptBuffer)
+  const indexBuf = Buffer.alloc(4, 0)
+  indexBuf.writeUInt32LE(genesisTxOutputIndex)
+  let tokenID = TokenProto.getTokenID(scriptBuffer)
+  let isFirstGenesis = false
+  if (tokenID.compare(Buffer.alloc(36, 0)) === 0) {
+    isFirstGenesis = true
+    tokenID = Buffer.concat([
+      Buffer.from(genesisTxId, 'hex').reverse(),
+      indexBuf,
+    ])
+    const newScriptBuf = TokenProto.getNewGenesisScript(scriptBuffer, tokenID)
+    genesisHash = bsv.crypto.Hash.sha256ripemd160(newScriptBuf)
+  }
+  else {
+    genesisHash = bsv.crypto.Hash.sha256ripemd160(scriptBuffer)
+  }
+  console.log('genesisHash:', genesisHash.toString('hex'))
 
-  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray)
+  const tokenContract = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash.toString('hex')))
 
   const decimalBuf = Buffer.alloc(1, 0)
   decimalBuf.writeUInt8(decimalNum)
@@ -257,8 +270,9 @@ TokenUtil.createToken = function(
   }))
 
   const genesisOutSatoshis = outputSatoshis
+  let lockingScript = bsv.Script.fromBuffer(TokenProto.getNewGenesisScript(genesisScript.toBuffer(), tokenID))
   tx.addOutput(new bsv.Transaction.Output({
-    script: genesisScript,
+    script: lockingScript,
     satoshis: genesisOutSatoshis,
   }))
 
@@ -284,7 +298,7 @@ TokenUtil.createToken = function(
   // TODO: get genesis from the script code
   const issuerPubKey = issuerPrivKey.publicKey
   //console.log('genesis args:', toHex(issuerPubKey), tokenName.toString('hex'), decimalNum)
-  const unlockRes = genesisContract.unlock(
+  const unlockingScript = genesisContract.unlock(
       new SigHashPreimage(toHex(preimage)),
       new Sig(toHex(sig)),
       new Bytes(rabinMsg.toString('hex')),
@@ -297,16 +311,7 @@ TokenUtil.createToken = function(
       new Ripemd160(changeAddress.hashBuffer.toString('hex')),
       changeSatoshis,
       new Bytes('')
-  )
-  const txContext = {
-    tx: tx,
-    inputIndex: 0,
-    inputSatoshis: inputAmount
-  }
-  const verifyRes = unlockRes.verify(txContext)
-  console.log("unlockToken: verify res", verifyRes)
-
-  const unlockingScript = unlockRes.toScript()
+  ).toScript()
 
   //console.log('genesis unlocking args:', toHex(preimage), toHex(sig), lockingScript.toHex(), outputSatoshis)
 
@@ -333,7 +338,7 @@ TokenUtil.createToken = function(
  * @param nTokenInputs {Number} number of input tokens
  * @param tokenOutputArray {object[]} the token output array
  * @param rabinPubKeyArray {BigInt[]} rabin pubkey array
- * @param tokenIDBuf {Buffer} the tokenID
+ * @param tokenID {Buffer} the tokenID
  * @param tokenCodeHash {Buffer} the token contract code hash
 */
 TokenUtil.createRouteCheckTx = function(

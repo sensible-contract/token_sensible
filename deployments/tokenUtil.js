@@ -41,7 +41,7 @@ const Token = buildContractClass(loadDesc('token_desc.json'))
 const RouteCheck = buildContractClass(loadDesc('tokenRouteCheck_desc.json'))
 const UnlockContractCheck = buildContractClass(loadDesc('tokenUnlockContractCheck_desc.json'))
 
-const rabinPubKeyIndexArray = [0, 1]
+const rabinPubKeyIndexArray = Common.rabinPubKeyIndexArray
 const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
 
 let genesisContract
@@ -523,7 +523,7 @@ TokenUtil.unlockRouteCheck = function(
       TokenUtil.getScriptHashBuf(tokenScriptBuf)
     ])
     checkRabinMsgArray = Buffer.concat([checkRabinMsgArray, rabinMsg])
-    for (let j = 0; j < 2; j++) {
+    for (let j = 0; j < Common.oracleVerifyNum; j++) {
       const rabinSignResult = Rabin.sign(rabinMsg.toString('hex'), Common.rabinPrivateKey.p, Common.rabinPrivateKey.q, Common.rabinPubKey)
       const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
       checkRabinSigArray = Buffer.concat([checkRabinSigArray, sigBuf])
@@ -677,7 +677,7 @@ TokenUtil.unlockUnlockContractCheck = function(
     new Bytes(inputRabinMsgArray.toString('hex')),
     new Bytes(inputRabinPaddingArray.toString('hex')),
     new Bytes(inputRabinSignArray.toString('hex')),
-    [0, 1],
+    rabinPubKeyIndexArray,
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     nOutputs,

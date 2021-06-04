@@ -46,8 +46,8 @@ function createNewToken() {
   let inputAmount = genesisTx.outputs[0].satoshis
 
   const rabinMsg = Buffer.alloc(1, 0)
-  const rabinPaddingArray = [new Bytes('00'), new Bytes('00')]
-  const rabinSigArray = [0, 0]
+  const rabinPaddingArray = Array(Common.oracleVerifyNum).fill(new Bytes(''))
+  const rabinSigArray = Array(Common.oracleVerifyNum).fill(0)
   fee = 10000
   const utxo2 = genesisTx.id
   const outIndex2 = genesisTx.outputs.length - 1

@@ -17,10 +17,10 @@ struct PayloadU4SpendByData {
 
 library RabinUtil {
 
-  static const int ORACLE_NUM = 7;
-  static const int ORACLE_VERIFY_NUM = 4;
+  static const int ORACLE_NUM = 3;
+  static const int ORACLE_VERIFY_NUM = 2;
   //static const int ORACLE_VERIFY_NUM2 = ORACLE_VERIFY_NUM - 1;
-  static const int ORACLE_VERIFY_NUM2 = 3;
+  static const int ORACLE_VERIFY_NUM2 = 1;
 
   // u4 rabin msg common format:
   // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <contractHash(20 bytes)>

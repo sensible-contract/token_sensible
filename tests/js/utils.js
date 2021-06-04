@@ -27,20 +27,13 @@ const toBufferLE = Common.toBufferLE
 
 const utils = module.exports
 
-utils.rabinPrivateKey = {
-  "p": 5757440790098238249206056886132360783939976756626308615141839695681752813612764520921497694519841722889028334119917789649651692480869415368298368200263n,
-  "q": 650047001204168007801848889418948532353073326909497585177081016045346562912146630794965372241635285465610094863279373295872825824127728241709483771067n
-}
+utils.rabinPrivateKey = Common.rabinPrivateKey
 utils.rabinPubKey = privKeyToPubKey(utils.rabinPrivateKey.p, utils.rabinPrivateKey.q)
 
-utils.oracleNum = 7
-utils.oracleVerifyNum = 4
-utils.rabinPubKeyArray = Array(utils.oracleNum).fill(utils.rabinPubKey)
-utils.rabinPubKeyIndexArray = []
-for (let i = 0; i < utils.oracleVerifyNum; i++) {
-  utils.rabinPubKeyIndexArray.push(i)
-}
-
+utils.oracleNum = common.oracleNum
+utils.oracleVerifyNum = common.oracleVerifyNum
+utils.rabinPubKeyArray = common.rabinPubKeyArray
+utils.rabinPubKeyIndexArray = common.rabinPubKeyIndexArray
 
 utils.genContract = function(name, use_desc=false) {
   if (use_desc) {

@@ -25,15 +25,20 @@ common.rabinPrivateKey = {
   "q": 650047001204168007801848889418948532353073326909497585177081016045346562912146630794965372241635285465610094863279373295872825824127728241709483771067n
 }
 common.rabinPubKey = Rabin.privKeyToPubKey(common.rabinPrivateKey.p, common.rabinPrivateKey.q)
-common.rabinPubKeyArray = [common.rabinPubKey, common.rabinPubKey, common.rabinPubKey]
-common.rabinPubKeyIndexArray = [0, 1]
+common.oracleNum = 3
+common.oracleVerifyNum = 2
+common.rabinPubKeyArray = Array(common.oracleNum).fill(common.rabinPubKey)
+common.rabinPubKeyIndexArray = []
+for (let i = 0; i < common.oracleVerifyNum; i++) {
+  common.rabinPubKeyIndexArray.push(i)
+}
 
 common.genContract = function(name, use_desc=true) {
   if (use_desc) {
-  return buildContractClass(loadDesc(name + '_desc.json'))
+    return buildContractClass(loadDesc(name + '_desc.json'))
   }
   else {
-  return buildContractClass(compileContract(name + '.scrypt'))
+    return buildContractClass(compileContract(name + '.scrypt'))
   }
 }
 
@@ -143,7 +148,7 @@ common.createRabinMsg = function(txid, outputIndex, satoshis, scriptBuf, spendBy
   const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
   let rabinPaddingArray = []
   let rabinSigArray = []
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < common.oracleVerifyNum; i++) {
     rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
     rabinSigArray.push(rabinSign)
   }

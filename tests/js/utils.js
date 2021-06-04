@@ -1,4 +1,4 @@
-const { expect } = require('chai');
+const { expect, util } = require('chai');
 const {
   bsv,
   buildContractClass,
@@ -33,7 +33,14 @@ utils.rabinPrivateKey = {
 }
 utils.rabinPubKey = privKeyToPubKey(utils.rabinPrivateKey.p, utils.rabinPrivateKey.q)
 
-utils.rabinPubKeyArray = [utils.rabinPubKey, utils.rabinPubKey, utils.rabinPubKey]
+utils.oracleNum = 7
+utils.oracleVerifyNum = 4
+utils.rabinPubKeyArray = Array(utils.oracleNum).fill(utils.rabinPubKey)
+utils.rabinPubKeyIndexArray = []
+for (let i = 0; i < utils.oracleVerifyNum; i++) {
+  utils.rabinPubKeyIndexArray.push(i)
+}
+
 
 utils.genContract = function(name, use_desc=false) {
   if (use_desc) {
@@ -81,7 +88,7 @@ utils.createRabinMsg = function(txid, outputIndex, satoshis, scriptBuf, spendByT
   const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
   let rabinPaddingArray = []
   let rabinSigArray = []
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < utils.oracleVerifyNum; i++) {
     rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
     rabinSigArray.push(rabinSign)
   }
@@ -131,17 +138,19 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
       TokenUtil.getUInt16Buf(rabinSignResult.paddingByteCount),
       Buffer.alloc(rabinSignResult.paddingByteCount)
     ])
-    inputRabinPaddingArray = Buffer.concat([
-      inputRabinPaddingArray,
-      padding, 
-      padding
-    ])
+    for (let i = 0; i < utils.oracleVerifyNum; i++) {
+      inputRabinPaddingArray = Buffer.concat([
+        inputRabinPaddingArray,
+        padding
+      ])
+    }
     const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
-    inputRabinSignArray = Buffer.concat([
-      inputRabinSignArray,
-      sigBuf, 
-      sigBuf
-    ])
+    for (let i = 0; i < utils.oracleVerifyNum; i++) {
+      inputRabinSignArray = Buffer.concat([
+        inputRabinSignArray,
+        sigBuf
+      ])
+    }
   }
 
   let otherOutputArray = Buffer.alloc(0)
@@ -178,7 +187,7 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
     new Bytes(inputRabinMsgArray.toString('hex')),
     new Bytes(inputRabinPaddingArray.toString('hex')),
     new Bytes(inputRabinSignArray.toString('hex')),
-    [0, 1],
+    utils.rabinPubKeyIndexArray,
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     nOutputs,

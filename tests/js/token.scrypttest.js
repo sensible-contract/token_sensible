@@ -29,8 +29,7 @@ const{
   sign,
   } = require("../../rabin/rabin");
 
-const Utils = require("./utils")
-
+const Utils = require("./utils");
 
 const addInput = Utils.addInput
 const addOutput = Utils.addOutput
@@ -38,7 +37,7 @@ const genContract = Utils.genContract
 
 const rabinPrivateKey = Utils.rabinPrivateKey
 const rabinPubKey = Utils.rabinPubKey
-const rabinPubKeyArray = [rabinPubKey, rabinPubKey, rabinPubKey]
+const rabinPubKeyArray = Utils.rabinPubKeyArray
 
 const OP_TRANSFER = 1
 const OP_UNLOCK_FROM_CONTRACT = 2
@@ -267,7 +266,7 @@ function verifyRouteCheck(tx, rabinPubKeyIndexArray, prevouts, routeCheck, token
     ])
     //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
 
-    for (let j = 0; j < 2; j++) {
+    for (let j = 0; j < Utils.oracleVerifyNum; j++) {
       const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
       const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
       rabinSignArray = Buffer.concat([rabinSignArray, sigBuf])
@@ -371,9 +370,9 @@ function verifyTokenTransfer(nTokenInputs, nTokenOutputs, nSatoshiInput, changeS
     addOutput(tx, bsv.Script.buildPublicKeyHashOut(address1), changeSatoshi)
   }
 
-  let rabinPubKeyIndexArray = [0, 1]
+  let rabinPubKeyIndexArray = Utils.rabinPubKeyIndexArray
   if (args.wrongRabinPubKeyIndex) {
-    rabinPubKeyIndexArray = [0, 0]
+    rabinPubKeyIndexArray = Array(Utils.oracleVerifyNum).fill(0)
   }
 
   //console.log('outputTokenArray:', outputTokenArray)
@@ -452,9 +451,9 @@ function unlockFromContract(nTokenInputs, nTokenOutputs, nOtherOutputs, args) {
 
   const tokenExpected = args.tokenExpected
   const checkExpected = args.checkExpected
-  let rabinPubKeyIndexArray = [0, 1]
+  let rabinPubKeyIndexArray = Utils.rabinPubKeyIndexArray
   if (args.wrongRabinPubKeyIndex) {
-    rabinPubKeyIndexArray = [0, 0]
+    rabinPubKeyIndexArray = Array(Utils.oracleVerifyNum).fill(0)
   }
   const sellSatoshis = 10000
   let prevouts = []
@@ -572,7 +571,7 @@ function simpleRouteUnlock(preUtxoId, preUtxoOutputIndex, scriptBuf, expected=tr
 
   let [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(preUtxoId, preUtxoOutputIndex, inputSatoshis, scriptBuf, dummyTxId)
   if (wrongRabin) {
-    rabinSigArray = [0, 0]
+    rabinSigArray = Array(Utils.oracleVerifyNum).fill(0)
   }
   //console.log("simpleRouteUnlock:", scriptBuf.toString('hex'), rabinMsg.toString('hex'))
 
@@ -588,7 +587,7 @@ function simpleRouteUnlock(preUtxoId, preUtxoOutputIndex, scriptBuf, expected=tr
     new Bytes(rabinMsg.toString('hex')),
     rabinPaddingArray,
     rabinSigArray,
-    [0, 1],
+    Utils.rabinPubKeyIndexArray,
     contractInputIndex,
     new Bytes(routeCheckTx.toString('hex')),
     0,

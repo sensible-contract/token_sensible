@@ -4,15 +4,15 @@ import "rabinUtil.scrypt";
 
 contract TokenGenesis {
   PubKey pubKey;
-  int[3] rabinPubKeyArray;
+  int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
 
   public function unlock(
     SigHashPreimage txPreimage,
     Sig sig,
     bytes rabinMsg,
-    bytes[2] rabinPaddingArray,
-    int[2] rabinSigArray,
-    int[2] rabinPubKeyIndexArray,
+    bytes[RabinUtil.ORACLE_VERIFY_NUM] rabinPaddingArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinSigArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
     int genesisSatoshis,
     bytes tokenScript,
     int tokenSatoshis,
@@ -55,8 +55,8 @@ contract TokenGenesis {
     // check the rabin msg
     if (!isFirst) {
       bytes thisOutpoint = Util.outpoint(txPreimage);
-      int verifyCount = RabinUtil.verifyMsgThree(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray);
-      require(verifyCount == 2);
+      int verifyCount = RabinUtil.verifyRabinMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray);
+      require(verifyCount == RabinUtil.ORACLE_VERIFY_NUM);
 
       PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
       require(pl.byTxId == thisOutpoint[ : 32]);

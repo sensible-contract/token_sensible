@@ -4,7 +4,7 @@ import "rabinUtil.scrypt";
 
 // opreturn nSenders(4 bytes) + receiverTokenAmountArray + receiverArray + nReceivers(4 bytes) + tokenCodeHash + tokenID
 contract TokenRouteCheck {
-  int[3] rabinPubKeyArray;
+  int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
 
   static const int MAX_INPUT = 3;
   static const int MAX_OUTPUT = 3;
@@ -16,7 +16,7 @@ contract TokenRouteCheck {
     bytes rabinMsgArray,
     bytes rabinPaddingArray,
     bytes rabinSigArray,
-    int[2] rabinPubKeyIndexArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
     bytes inputTokenAddressArray,
     bytes inputTokenAmountArray,
     bytes receiverSatoshiArray,
@@ -51,7 +51,7 @@ contract TokenRouteCheck {
 
     int sumInputToken = 0;
     int paddingPos = 0;
-    require(rabinPubKeyIndexArray[0] != rabinPubKeyIndexArray[1]);
+    RabinUtil.verifyRabinPubkeyIndexArray(rabinPubKeyIndexArray);
     require(nSenders <= MAX_INPUT);
     // max support loop num input token
     loop(MAX_INPUT): i {
@@ -59,10 +59,10 @@ contract TokenRouteCheck {
         // verify rabin signature
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
-        loop(2): j {
+        loop(RabinUtil.ORACLE_VERIFY_NUM): j {
           int pubIndex = rabinPubKeyIndexArray[j];
           int rabinPubKey = this.rabinPubKeyArray[pubIndex];
-          int arrayIndex = i * 2 + j;
+          int arrayIndex = i * RabinUtil.ORACLE_VERIFY_NUM + j;
           int rabinSig = Util.fromLEUnsigned(rabinSigArray[arrayIndex * RabinUtil.RABIN_SIG_LEN: (arrayIndex + 1) * RabinUtil.RABIN_SIG_LEN]);
           int paddingLen = Util.fromLEUnsigned(rabinPaddingArray[paddingPos: paddingPos + RabinUtil.PADDING_SIZE_LEN]);
           bytes padding = b'';
@@ -75,7 +75,7 @@ contract TokenRouteCheck {
             verifyCount += 1;
           }
         }
-        require(verifyCount == 2);
+        require(verifyCount == RabinUtil.ORACLE_VERIFY_NUM);
 
         PayloadU4Data u4 = RabinUtil.loadPayloadU4(rabinMsg);
         require(u4.outpoint == prevouts[i * 36: (i + 1) * 36]);

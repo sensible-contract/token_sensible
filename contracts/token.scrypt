@@ -7,7 +7,8 @@ import "rabinUtil.scrypt";
  * A token protocol based on UTXO model
  */
 contract Token {
-  int[3] rabinPubKeyArray;
+
+  int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
   bytes[5] routeContractCodeHashArray;
   bytes[5] unlockContractCodeHashArray;
   bytes genesisContractHash;
@@ -64,9 +65,9 @@ contract Token {
     int tokenInputIndex,
     bytes prevouts,
     bytes rabinMsg,
-    bytes[2] rabinPaddingArray,
-    int[2] rabinSigArray,
-    int[2] rabinPubKeyIndexArray,
+    bytes[RabinUtil.ORACLE_VERIFY_NUM] rabinPaddingArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinSigArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
     int checkInputIndex,
     bytes checkScriptTx,
     int checkScriptTxOutIndex,

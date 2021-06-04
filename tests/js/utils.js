@@ -30,10 +30,10 @@ const utils = module.exports
 utils.rabinPrivateKey = Common.rabinPrivateKey
 utils.rabinPubKey = privKeyToPubKey(utils.rabinPrivateKey.p, utils.rabinPrivateKey.q)
 
-utils.oracleNum = common.oracleNum
-utils.oracleVerifyNum = common.oracleVerifyNum
-utils.rabinPubKeyArray = common.rabinPubKeyArray
-utils.rabinPubKeyIndexArray = common.rabinPubKeyIndexArray
+utils.oracleNum = Common.oracleNum
+utils.oracleVerifyNum = Common.oracleVerifyNum
+utils.rabinPubKeyArray = Common.rabinPubKeyArray
+utils.rabinPubKeyIndexArray = Common.rabinPubKeyIndexArray
 
 utils.genContract = function(name, use_desc=false) {
   if (use_desc) {

@@ -79,11 +79,12 @@ let Token, RouteCheck, UnlockContractCheck, TokenSell
 
 function initContract() {
   const use_desc = false
-  Genesis = genContract('tokenGenesis', use_desc)
-  Token = genContract('token', use_desc)
-  RouteCheck = genContract('tokenRouteCheck', use_desc)
-  UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc)
-  TokenSell = genContract('tokenSell', use_desc)
+  const use_release = true
+  Genesis = genContract('tokenGenesis', use_desc, use_release)
+  Token = genContract('token', use_desc, use_release)
+  RouteCheck = genContract('tokenRouteCheck', use_desc, use_release)
+  UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc, use_release)
+  TokenSell = genContract('tokenSell', use_desc, use_release)
 }
 
 function createTokenGenesisContract() {
@@ -733,7 +734,7 @@ describe('Test token contract unlock In Javascript', () => {
       tokenExpected: true,
       checkExpected: true,
     }
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 2; i++) {
       for (let j = 1; j <= 3; j++) {
         unlockFromContract(i, j, 2, args)
       }

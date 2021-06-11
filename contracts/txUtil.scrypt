@@ -10,12 +10,10 @@ library TxUtil {
 
   static function readOutputScript(bytes tx, int outputIndex): bytes {
     // first 4 bytes version
-    // 1 byte input num, only support max 2
+    // 1 byte input num, only support max 3
     int pos = 4;
     int ninputs = TxUtil.fromLEUnsigned(tx[pos: pos + 1]);
     pos = pos + 1;
-    int scriptLen = 0;
-    int varLen = 0;
     bytes res = b'';
     // max support 3 input
     // input
@@ -26,18 +24,18 @@ library TxUtil {
         pos = pos + 36;
         // 1 byte var
         // script code + 4 bytes sequence
-        varLen = TxUtil.fromLEUnsigned(tx[pos: pos + 1]);
+        int varLen = TxUtil.fromLEUnsigned(tx[pos: pos + 1]);
         if (varLen < 253) {
-          scriptLen = varLen;
+          int scriptLen = varLen;
           pos = pos + 1 + scriptLen + 4;
         } else if (varLen == 253) {
-          scriptLen = TxUtil.fromLEUnsigned(tx[pos + 1: pos + 3]);
+          int scriptLen = TxUtil.fromLEUnsigned(tx[pos + 1: pos + 3]);
           pos = pos + 3 + scriptLen + 4;
         } else if (varLen == 254) {
-          scriptLen = TxUtil.fromLEUnsigned(tx[pos + 1: pos + 5]);
+          int scriptLen = TxUtil.fromLEUnsigned(tx[pos + 1: pos + 5]);
           pos = pos + 5 + scriptLen + 4;
         } else {
-          scriptLen = TxUtil.fromLEUnsigned(tx[pos + 1: pos + 9]);
+          int scriptLen = TxUtil.fromLEUnsigned(tx[pos + 1: pos + 9]);
           pos = pos + 9 + scriptLen + 4;
         }
       }
@@ -51,7 +49,8 @@ library TxUtil {
         // 8 bytes value
         pos = pos + 8;
         // script code
-        varLen = TxUtil.fromLEUnsigned(tx[pos: pos + 1] + b'00');
+        int varLen = TxUtil.fromLEUnsigned(tx[pos: pos + 1] + b'00');
+        int scriptLen = 0;
         if (varLen < 253) {
           scriptLen = varLen;
           pos = pos + 1 + scriptLen;

@@ -13,6 +13,11 @@ const {
 } = require('scryptlib');
 
 const {
+  readFileSync,
+} = require('fs')
+const path = require('path')
+
+const {
   loadDesc,
   compileContract,
 } = require('../helper');
@@ -33,9 +38,21 @@ for (let i = 0; i < common.oracleVerifyNum; i++) {
   common.rabinPubKeyIndexArray.push(i)
 }
 
-common.genContract = function(name, use_desc=true) {
+function loadReleaseDesc(fileName) {
+  const filePath = path.join(__dirname, `out/${fileName}`);
+  if (!existsSync(filePath)) {
+    throw new Error(`Description file ${filePath} not exist!\nIf You already run 'npm run watch', maybe fix the compile error first!`)
+  }
+  return JSON.parse(readFileSync(filePath).toString());
+}
+
+common.genContract = function(name, use_desc=true, use_release=false) {
   if (use_desc) {
-    return buildContractClass(loadDesc(name + '_desc.json'))
+    if (use_release) {
+      return buildContractClass(loadReleaseDesc(name + '_release_desc.json'))
+    } else {
+      return buildContractClass(loadDesc(name + '_desc.json'))
+    }
   }
   else {
     return buildContractClass(compileContract(name + '.scrypt'))
@@ -81,7 +98,7 @@ common.writeVarint = function(buf) {
 
 		const n = buf.length;
 
-    let res = Buffer.alloc(0)
+    let header = Buffer.alloc(0)
 		if (n < 0xfd) {
 			header = common.getUInt8Buf(n);
 		} else if (n < 0x10000) {

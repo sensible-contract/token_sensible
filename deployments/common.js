@@ -14,6 +14,7 @@ const {
 
 const {
   readFileSync,
+  existsSync
 } = require('fs')
 const path = require('path')
 
@@ -39,7 +40,7 @@ for (let i = 0; i < common.oracleVerifyNum; i++) {
 }
 
 function loadReleaseDesc(fileName) {
-  const filePath = path.join(__dirname, `out/${fileName}`);
+  const filePath = path.join(__dirname, `../out/${fileName}`);
   if (!existsSync(filePath)) {
     throw new Error(`Description file ${filePath} not exist!\nIf You already run 'npm run watch', maybe fix the compile error first!`)
   }

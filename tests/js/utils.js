@@ -35,29 +35,28 @@ utils.oracleVerifyNum = Common.oracleVerifyNum
 utils.rabinPubKeyArray = Common.rabinPubKeyArray
 utils.rabinPubKeyIndexArray = Common.rabinPubKeyIndexArray
 
-utils.genContract = function(name, use_desc=false) {
-  if (use_desc) {
-    return buildContractClass(loadDesc(name + '_desc.json'))
-  }
-  else {
-    return buildContractClass(compileContract(name + '.scrypt'))
-  }
-}
+utils.genContract = Common.genContract
 
-utils.addInput = function(tx, lockingScript, i, prevouts, prevTxId=null) {
+utils.addInput = function(tx, lockingScript, outputIndex, prevouts, prevTxId=null, satoshis=null) {
   if (prevTxId === null) {
     prevTxId = dummyTxId
   }
+  if (satoshis === null) {
+    satoshis = inputSatoshis
+  }
   tx.addInput(new bsv.Transaction.Input({
     prevTxId: prevTxId,
-    outputIndex: i,
+    outputIndex: outputIndex,
     script: ''
-  }), lockingScript, inputSatoshis)
+  }), lockingScript, satoshis)
   prevouts.push(TokenUtil.getTxIdBuf(prevTxId))
-  prevouts.push(TokenUtil.getUInt32Buf(i))
+  prevouts.push(TokenUtil.getUInt32Buf(outputIndex))
 }
 
 utils.addOutput = function(tx, lockingScript, outputSatoshis=inputSatoshis) {
+  if (typeof outputSatoshis === 'bigint') {
+    outputSatoshis = Number(outputSatoshis)
+  }
   tx.addOutput(new bsv.Transaction.Output({
     script: lockingScript,
     satoshis: outputSatoshis

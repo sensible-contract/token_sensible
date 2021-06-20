@@ -1,16 +1,20 @@
 const path = require('path')
 const {
   readFileSync,
-  existsSync
+  existsSync,
+  mkdirSync
 } = require('fs')
 const {
   bsv,
+  compile,
   compileContract: compileContractImpl
 } = require('scryptlib')
 const {
-  getPlatformScryptc,
-} = require('scryptlib/dist/compilerWrapper')
+  getCIScryptc
+} = require('scryptlib/dist/utils')
+
 const { exit } = require('process');
+const minimist = require('minimist');
 
 const Signature = bsv.crypto.Signature
 const BN = bsv.crypto.BN
@@ -39,6 +43,8 @@ function newTx() {
   };
   return new bsv.Transaction().from(utxo);
 }
+
+
 
 // reverse hexStr byte order
 function reverseEndian(hexStr) {
@@ -91,6 +97,25 @@ async function createLockingTx(address, amountInContract, fee) {
   return tx
 }
 
+async function anyOnePayforTx(tx, address, fee) {
+  // step 1: fetch utxos
+  let {
+    data: utxos
+  } = await axios.get(`${API_PREFIX}/address/${address}/unspent`)
+
+  utxos.map(utxo => {
+    tx.addInput(new bsv.Transaction.Input({
+      prevTxId:  utxo.tx_hash,
+      outputIndex: utxo.tx_pos,
+      script: new bsv.Script(), // placeholder
+    }), bsv.Script.buildPublicKeyHashOut(address).toHex(), utxo.value)
+  })
+
+  tx.change(address).fee(fee)
+
+  return tx
+}
+
 function createUnlockingTx(prevTxId, inputAmount, inputLockingScriptASM, outputAmount, outputLockingScriptASM) {
   const tx = new bsv.Transaction()
 
@@ -139,11 +164,40 @@ async function sendTx(tx) {
   return txid
 }
 
-function compileContract(fileName) {
+function compileContract(fileName, options) {
   const filePath = path.join(__dirname, 'contracts', fileName)
   const out = path.join(__dirname, 'deployments/fixture/autoGen')
 
-  return compileContractImpl(filePath, out);
+  const result = compileContractImpl(filePath, options ? options : {
+    out: out
+  });
+  if (result.errors.length > 0) {
+    console.log(`Compile contract ${filePath} fail: `, result.errors)
+    throw result.errors;
+  }
+
+  return result;
+}
+
+
+
+
+
+function compileTestContract(fileName) {
+  const filePath = path.join(__dirname, 'tests', 'testFixture', fileName)
+  const out = path.join(__dirname, 'tests', 'out')
+  if (!existsSync(out)) {
+      mkdirSync(out)
+  }
+  const result = compileContractImpl(filePath, {
+    out: out
+  });
+  if (result.errors.length > 0) {
+    console.log(`Compile contract ${filePath} fail: `, result.errors)
+    throw result.errors;
+  }
+
+  return result;
 }
 
 function loadDesc(fileName) {
@@ -169,12 +223,19 @@ function showError(error) {
     console.log(error.request);
   } else {
     // Something happened in setting up the request that triggered an Error
-    console.log('Error:', error.message, error.stack);
+    console.log('Error:', error.message);
     if (error.context) {
       console.log(error.context);
     }
   }
 };
+
+function padLeadingZero(hex) {
+  if(hex.length % 2 === 0) return hex;
+  return "0" + hex;
+}
+
+const emptyPublicKey = '000000000000000000000000000000000000000000000000000000000000000000'
 
 module.exports = {
   inputIndex,
@@ -192,5 +253,9 @@ module.exports = {
   compileContract,
   loadDesc,
   sighashType2Hex,
-  showError
+  showError,
+  compileTestContract,
+  padLeadingZero,
+  anyOnePayforTx,
+  emptyPublicKey
 }

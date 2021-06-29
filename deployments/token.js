@@ -99,20 +99,20 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex, tokenContract)
 
   let bsvFeeTx = tokenTx
   let bsvFeeOutputIndex = tokenTx.outputs.length - 1
-  const [routeCheck, routeCheckTx] = TokenUtil.createRouteCheckTx(bsvFeeTx, bsvFeeOutputIndex, privateKey, dustLimit, fee, address1, 1, tokenOutputArray, tokenID, tokenCodeHash)
+  const [rtransferCheck, rtransferCheckTx] = TokenUtil.createTransferCheckTx(bsvFeeTx, bsvFeeOutputIndex, privateKey, dustLimit, fee, address1, 1, tokenOutputArray, tokenID, tokenCodeHash)
 
   fee = 30000
   const changeAddress = address1
   const satoshiInput = {
-    tx: routeCheckTx,
+    tx: rtransferCheckTx,
     outputIndex: 1
   }
   satoshiInputArray.push(satoshiInput)
   satoshiInputPrivKeyArray.push(privateKey)
 
   const tx = TokenUtil.createTokenTransfer(
-    routeCheckTx,
-    routeCheck,
+    rtransferCheckTx,
+    rtransferCheck,
     tokenInputArray,
     satoshiInputArray,
     Common.rabinPubKeyArray,
@@ -125,7 +125,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex, tokenContract)
 
   //console.log('createTokenTransferTx', tx.id, tx.serialize())
   const transferTx = tx
-  return [routeCheckTx, transferTx]
+  return [rtransferCheckTx, transferTx]
 }
 
 (async() => {
@@ -134,14 +134,14 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex, tokenContract)
 
     const [genesisTx, tokenContract, tokenTx] = createNewToken()
 
-    console.log('genesisTx id:', genesisTx.id, genesisTx.serialize().length / 2)
-    console.log('tokenTx id:', tokenTx.id, tokenTx.serialize().length / 2)
+    console.log('genesisTx id:', genesisTx.id, genesisTx.toBuffer().length)
+    console.log('tokenTx id:', tokenTx.id, tokenTx.toBuffer().length)
 
     // 1 input token with 3 output token
     const [scriptTx, transferTx] = createTokenTransferTx(genesisTx, tokenTx, 1, tokenContract)
 
-    console.log('checkScriptTx id:', scriptTx.id, scriptTx.serialize().length / 2)
-    console.log('transferTx id:', transferTx.id, transferTx.serialize().length / 2)
+    console.log('checkScriptTx id:', scriptTx.id, scriptTx.toBuffer().length)
+    console.log('transferTx id:', transferTx.id, transferTx.toBuffer().length)
 
     const sendFlag = false
     if (sendFlag) {

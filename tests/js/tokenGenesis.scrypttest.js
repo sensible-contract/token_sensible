@@ -30,19 +30,19 @@ const{ generatePrivKey,
 const Proto = require('../../deployments/protoheader')
 const TokenProto = require('../../deployments/tokenProto')
 const Utils = require('./utils');
-const { rabinPubKeyArray, rabinPubKeyIndexArray } = require('./utils');
+const { rabinPubKeyVerifyArray, rabinPubKeyIndexArray, rabinPubKeyHashArray, rabinPubKeyHashArrayHash } = require('../../deployments/common');
 
 let tx
 const outputAmount = inputSatoshis
 const genContract = Utils.genContract
 
-let Token, Genesis, RouteCheck, UnlockContractCheck
+let Token, Genesis, TransferCheck, UnlockContractCheck
 function initContract() {
   const use_desc = false
-  const use_release = true
+  const use_release = false
   Genesis = genContract('tokenGenesis', use_desc, use_release)
   Token = genContract('token', use_desc, use_release)
-  RouteCheck = genContract('tokenRouteCheck', use_desc, use_release)
+  TransferCheck = genContract('tokenTransferCheck', use_desc, use_release)
   UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc, use_release)
 }
 initContract()
@@ -62,28 +62,25 @@ const tokenValue = 1000000
 const buffValue = Buffer.alloc(8, 0)
 buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const decimalNum = Buffer.from('08', 'hex')
-const routeCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
-const routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
-const unlockContractCodeHashArray = routeCheckCodeHashArray
-let genesisHash
-const tokenID = Buffer.concat([
+const rtransferCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
+const rtransferCheckCodeHashArray = [rtransferCheckCodeHash, rtransferCheckCodeHash, rtransferCheckCodeHash, rtransferCheckCodeHash, rtransferCheckCodeHash]
+const unlockContractCodeHashArray = rtransferCheckCodeHashArray
+const sensibleID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
   Buffer.alloc(4, 0),
 ])
 
-let genesis, result, genesisScript
+let genesis, result, genesisScript, genesisHash
 
-function createToken(oracleData) {
-  // add genesis output
+function createToken(oracleData, options={}) {
   const scriptBuf = genesisScript.toBuffer()
-  const newScriptBuf = TokenProto.getNewGenesisScript(scriptBuf, tokenID)
-  genesisHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(newScriptBuf)).toString('hex')
+  const newScriptBuf = TokenProto.getNewGenesisScript(scriptBuf, sensibleID)
   tx.addOutput(new bsv.Transaction.Output({
     script: bsv.Script.fromBuffer(newScriptBuf),
     satoshis: outputAmount
   }))
 
-  const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
+  const token = new Token(rtransferCheckCodeHashArray, unlockContractCodeHashArray)
   token.setDataPart(oracleData.toString('hex'))
   const lockingScript = token.lockingScript
   tx.addOutput(new bsv.Transaction.Output({
@@ -113,6 +110,8 @@ function createToken(oracleData) {
     rabinPaddingArray,
     rabinSigArray,
     rabinPubKeyIndexArray,
+    rabinPubKeyVerifyArray,
+    new Bytes(rabinPubKeyHashArray.toString('hex')),
     outputAmount,
     new Bytes(lockingScript.toHex()), 
     outputAmount,
@@ -120,13 +119,19 @@ function createToken(oracleData) {
     0,
     new Bytes('')
     ).verify(txContext)
-  return result
+  if (options.expected === false) {
+    expect(result.success, result.error).to.be.false
+  } else {
+    expect(result.success, result.error).to.be.true
+  }
+
+  return token
 }
 
 describe('Test genesis contract unlock In Javascript', () => {
 
   beforeEach(() => {
-    genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
+    genesis = new Genesis(new PubKey(toHex(issuerPubKey)))
     const oracleData = Buffer.concat([
       tokenName,
       tokenSymbol,
@@ -134,13 +139,18 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       Buffer.alloc(20, 0), // address
       Buffer.alloc(8, 0), // token value
-      Buffer.alloc(36, 0), // script code hash
+      Buffer.alloc(20, 0), // genesisHash
+      rabinPubKeyHashArrayHash,
+      Buffer.alloc(36, 0), // sensibleID
       tokenType, // type
       PROTO_FLAG
     ])
     genesis.setDataPart(oracleData.toString('hex'))
 
     genesisScript = genesis.lockingScript
+    const scriptBuf = genesisScript.toBuffer()
+    const newScriptBuf = TokenProto.getNewGenesisScript(scriptBuf, sensibleID)
+    genesisHash = bsv.crypto.Hash.sha256ripemd160(newScriptBuf)
 
     tx = new bsv.Transaction()
     tx.addInput(new bsv.Transaction.Input({
@@ -152,6 +162,8 @@ describe('Test genesis contract unlock In Javascript', () => {
   });
 
   it('should succeed when issue token', () => {
+
+    // add genesis output
     let oracleData = Buffer.concat([
       tokenName,
       tokenSymbol,
@@ -159,13 +171,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer,
       buffValue,
-      tokenID,
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID,
       tokenType, // type
       PROTO_FLAG
     ])
-    let result = createToken(oracleData)
-    expect(result.success, result.error).to.be.true
-
+    createToken(oracleData)
     // issue token again
     const prevTx = tx
     tx =  new bsv.Transaction()
@@ -181,7 +193,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       satoshis: outputAmount
     }))
 
-    const token = new Token(rabinPubKeyArray, routeCheckCodeHashArray, unlockContractCodeHashArray, new Bytes(genesisHash))
+    const token = new Token(rtransferCheckCodeHashArray, unlockContractCodeHashArray)
     token.setDataPart(oracleData.toString('hex'))
     const lockingScript = token.lockingScript
     tx.addOutput(new bsv.Transaction.Output({
@@ -202,28 +214,9 @@ describe('Test genesis contract unlock In Javascript', () => {
       inputSatoshis: outputAmount
     }
 
-    /*const satoshiBuf = Buffer.alloc(8, 0)
-    satoshiBuf.writeBigUInt64LE(BigInt(inputAmount))
-    const scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(genesisScript.toBuffer()))
-    let rabinMsg = Buffer.concat([
-      tokenID,
-      satoshiBuf,
-      scriptHash,
-      Buffer.from([...Buffer.from(prevTx.id, 'hex')].reverse()),
-    ])
-    const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
-    //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
-    const rabinSign = rabinSignResult.signature
-    const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
-    let rabinPaddingArray = []
-    let rabinSigArray = []
-    for (let i = 0; i < 2; i++) {
-      rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
-      rabinSigArray.push(rabinSign)
-    }*/
     const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, 0, inputAmount, genesisScript.toBuffer(), prevTx.id)
 
-    const genesis = new Genesis(new PubKey(toHex(issuerPubKey)), rabinPubKeyArray)
+    const genesis = new Genesis(new PubKey(toHex(issuerPubKey)))
     oracleData = Buffer.concat([
       tokenName,
       tokenSymbol,
@@ -231,7 +224,9 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       Buffer.alloc(20, 0), // address
       Buffer.alloc(8, 0), // token value
-      tokenID,
+      Buffer.alloc(20, 0), // genesisHash
+      rabinPubKeyHashArrayHash,
+      sensibleID,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -243,6 +238,8 @@ describe('Test genesis contract unlock In Javascript', () => {
       rabinPaddingArray,
       rabinSigArray,
       rabinPubKeyIndexArray,
+      rabinPubKeyVerifyArray,
+      new Bytes(rabinPubKeyHashArray.toString('hex')),
       outputAmount,
       new Bytes(lockingScript.toHex()), 
       outputAmount,
@@ -261,12 +258,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    let result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
 
     const oracleData2 = Buffer.concat([
       tokenName.subarray(0, tokenName.length - 2),
@@ -275,12 +273,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    result = createToken(oracleData2)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData2, {expected: false})
   });
   it('should failed when add wrong data length', () => {
     const oracleData = Buffer.concat([
@@ -291,12 +290,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    let result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
   })
 
   it('should failed when get wrong tokenSymbol', () => {
@@ -307,12 +307,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    let result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
 
     // wrong token symbol length
     const oracleData2 = Buffer.concat([
@@ -322,12 +323,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    result = createToken(oracleData2)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData2, {expected: false})
   });
 
   it('should failed when get wrong genesis flag', () => {
@@ -338,12 +340,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    const result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
   });
 
   it('should failed when get wrong tokenID', () => {
@@ -354,12 +357,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      Buffer.alloc(tokenID.length, 0), // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      Buffer.alloc(sensibleID.length, 0), // script code hash
       tokenType, // type
       PROTO_FLAG
     ])
-    const result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
   });
   it('should failed when get wrong tokenType', () => {
     const oracleData = Buffer.concat([
@@ -369,12 +373,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       Buffer.alloc(tokenType.length, 0), // type
       PROTO_FLAG
     ])
-    const result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
   });
   it('should failed when get wrong proto flag', () => {
     const oracleData = Buffer.concat([
@@ -384,12 +389,13 @@ describe('Test genesis contract unlock In Javascript', () => {
       decimalNum,
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       Buffer.alloc(PROTO_FLAG.length, 0)
     ])
-    const result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
   });
   it('should failed when get wrong decimalNum', () => {
     const oracleData = Buffer.concat([
@@ -399,11 +405,44 @@ describe('Test genesis contract unlock In Javascript', () => {
       Buffer.from('01', 'hex'),
       address1.hashBuffer, // address
       buffValue, // token value
-      tokenID, // script code hash
+      genesisHash,
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
       tokenType, // type
       Buffer.alloc(PROTO_FLAG.length, 0)
     ])
-    const result = createToken(oracleData)
-    expect(result.success, result.error).to.be.false
+    createToken(oracleData, {expected: false})
+  });
+  it('should failed when get wrong genesisHash', () => {
+    const oracleData = Buffer.concat([
+      tokenName,
+      tokenSymbol,
+      nonGenesisFlag, 
+      Buffer.from('01', 'hex'),
+      address1.hashBuffer, // address
+      buffValue, // token value
+      Buffer.alloc(20, 0),
+      rabinPubKeyHashArrayHash,
+      sensibleID, // script code hash
+      tokenType, // type
+      Buffer.alloc(PROTO_FLAG.length, 0)
+    ])
+    createToken(oracleData, {expected: false})
+  });
+  it('should failed when get wrong rabinPubKeyHashArrayHash', () => {
+    const oracleData = Buffer.concat([
+      tokenName,
+      tokenSymbol,
+      nonGenesisFlag, 
+      Buffer.from('01', 'hex'),
+      address1.hashBuffer, // address
+      buffValue, // token value
+      genesisHash,
+      Buffer.alloc(20, 0),
+      sensibleID, // script code hash
+      tokenType, // type
+      Buffer.alloc(PROTO_FLAG.length, 0)
+    ])
+    createToken(oracleData, {expected: false})
   });
 });

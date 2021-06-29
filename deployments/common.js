@@ -26,18 +26,46 @@ const Rabin = require('../rabin/rabin')
 
 const common = module.exports
 
+common.toBufferLE = function(num, width) {
+  const hex = num.toString(16);
+  const buffer = Buffer.from(hex.padStart(width * 2, '0').slice(0, width * 2), 'hex');
+  buffer.reverse();
+  return buffer;
+}
+
+common.toBigIntLE = function(buf) {
+  const reversed = Buffer.from(buf);
+  reversed.reverse();
+  const hex = reversed.toString('hex');
+  if (hex.length === 0) {
+    return BigInt(0);
+  }
+  return BigInt(`0x${hex}`);
+}
+
 common.rabinPrivateKey = {
   "p": 95710409893817590390139663620366087275247408870842408333898219789050248281757245653962387186577011330413555521601303684960193661446529472595380568496662925717078463086455517438374035528795054110257771412467704924454096429331440714533978386632223042409454305192998811299899291186224795472049889580961886731292907368505099290699371972445350648299305194949955498966079496522896945905590774529349417838259757483085686639857637673528220491859752024165356945769688179n,
   "q": 850361483999592259194197904385613729225847080600107506453692692749565317225938190302437735634758241138444628410968946005140011938713710123917746213155365089324622574228924043794545051050702182655538958610595375336927418648927281663309451280457968105117464051777473418439580755116783253855845974554839203812079902631524368921329232372909802643698042593677933776895789908458900010987268214267756860213459255223762730848062269190843789517079066242842918728372101047n
 }
 common.rabinPubKey = Rabin.privKeyToPubKey(common.rabinPrivateKey.p, common.rabinPrivateKey.q)
+common.rabinPubKeyLen = 384
 common.oracleNum = 5
 common.oracleVerifyNum = 3
 common.rabinPubKeyArray = Array(common.oracleNum).fill(common.rabinPubKey)
+common.rabinPubKeyVerifyArray = []
 common.rabinPubKeyIndexArray = []
 for (let i = 0; i < common.oracleVerifyNum; i++) {
   common.rabinPubKeyIndexArray.push(i)
+  common.rabinPubKeyVerifyArray.push(common.rabinPubKeyArray[i])
 }
+common.rabinPubKeyHashArray = Buffer.alloc(0)
+for (let i = 0; i < common.oracleNum; i++) {
+  common.rabinPubKeyHashArray = Buffer.concat([
+    common.rabinPubKeyHashArray,
+    bsv.crypto.Hash.sha256ripemd160(common.toBufferLE(common.rabinPubKeyArray[i], common.rabinPubKeyLen))
+  ])
+}
+common.rabinPubKeyHashArrayHash = bsv.crypto.Hash.sha256ripemd160(common.rabinPubKeyHashArray)
 
 function loadReleaseDesc(fileName) {
   const filePath = path.join(__dirname, `../out/${fileName}`);
@@ -209,21 +237,4 @@ common.signP2PKH = function(tx, privKey, inputIndex) {
   const hashData = bsv.crypto.Hash.sha256ripemd160(privKey.publicKey.toBuffer())
   const sig = tx.inputs[inputIndex].getSignatures(tx, privKey, inputIndex, sigtype, hashData)
   tx.inputs[inputIndex].addSignature(tx, sig[0])
-}
-
-common.toBufferLE = function(num, width) {
-  const hex = num.toString(16);
-  const buffer = Buffer.from(hex.padStart(width * 2, '0').slice(0, width * 2), 'hex');
-  buffer.reverse();
-  return buffer;
-}
-
-common.toBigIntLE = function(buf) {
-  const reversed = Buffer.from(buf);
-  reversed.reverse();
-  const hex = reversed.toString('hex');
-  if (hex.length === 0) {
-    return BigInt(0);
-  }
-  return BigInt(`0x${hex}`);
 }

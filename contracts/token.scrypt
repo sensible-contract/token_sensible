@@ -8,10 +8,8 @@ import "rabinUtil.scrypt";
  */
 contract Token {
 
-  int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
   bytes[5] routeContractCodeHashArray;
   bytes[5] unlockContractCodeHashArray;
-  bytes genesisContractHash;
 
   function verifyAmountCheckContract(
     bytes[5] contractCodeHashArray,
@@ -33,7 +31,7 @@ contract Token {
     bytes prevScriptCode = TxUtil.readOutputScript(prevScriptTx, prevScriptOutIndex);
     int scriptLen = len(prevScriptCode);
 
-    require(tokenID == prevScriptCode[scriptLen - TokenProto.TOKEN_ID_LEN: scriptLen]);
+    require(tokenID == prevScriptCode[scriptLen - TokenProto.TOKEN_ID_LEN:]);
 
     require(tokenCodeHash == prevScriptCode[scriptLen - 20 - TokenProto.TOKEN_ID_LEN: scriptLen - TokenProto.TOKEN_ID_LEN]);
 
@@ -68,6 +66,8 @@ contract Token {
     bytes[RabinUtil.ORACLE_VERIFY_NUM] rabinPaddingArray,
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinSigArray,
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyVerifyArray,
+    bytes rabinPubKeyHashArray,
     int checkInputIndex,
     bytes checkScriptTx,
     int checkScriptTxOutIndex,
@@ -88,7 +88,6 @@ contract Token {
     bytes tokenScript = Util.scriptCode(txPreimage);
     int scriptLen = len(tokenScript);
     bytes senderAddress = TokenProto.getTokenAddress(tokenScript, scriptLen);
-    bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
 
     bytes tokenCodeHash = TokenProto.getContractCodeHash(tokenScript, scriptLen);
     bytes[5] hashArray = [b'', b'', b'', b'', b''];
@@ -107,7 +106,7 @@ contract Token {
       bytes contractHash = TokenProto.getTokenAddress(tokenScript, scriptLen);
 
       // burning address
-      if (contractHash != b'0000000000000000000000000000000000000000') {
+      if (contractHash != TokenProto.BURN_ADDRESS) {
         bytes prevScriptTxId = prevouts[lockContractInputIndex * TxUtil.OUTPOINT_LEN: lockContractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
         require(hash256(lockContractTx) == prevScriptTxId);
 
@@ -117,11 +116,15 @@ contract Token {
       }
     }
 
-    bytes thisOutpoint = Util.outpoint(txPreimage);
     // verify rabin signature
-    bool res = RabinUtil.verifySelfMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray, thisOutpoint, tokenID, tokenScript, this.genesisContractHash, prevTokenAddress, prevTokenAmount);
-    require(res == true);
+    bytes thisOutpoint = Util.outpoint(txPreimage);
+    bytes genesisHash = TokenProto.getGenesisHash(tokenScript, scriptLen);
+    bytes rabinPubKeyHashArrayHash = TokenProto.getRabinPubKeyHashArrayHash(tokenScript, scriptLen);
+    bytes sensibleID = TokenProto.getSensibleID(tokenScript, scriptLen);
+    RabinUtil.verifyRabinPubKey(rabinPubKeyHashArrayHash,rabinPubKeyHashArray, rabinPubKeyVerifyArray, rabinPubKeyIndexArray);
+    RabinUtil.verifyTokenMsg(rabinPubKeyVerifyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, sensibleID, tokenScript, genesisHash, prevTokenAddress, prevTokenAmount);
 
+    bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
     bool res2 = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, checkScriptTxOutIndex, tokenID, tokenCodeHash, nReceivers, thisOutpoint, tokenInputIndex, operation);
     require(res2 == true);
   }

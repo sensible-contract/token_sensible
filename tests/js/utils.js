@@ -180,6 +180,8 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
     new Bytes(inputRabinPaddingArray.toString('hex')),
     new Bytes(inputRabinSignArray.toString('hex')),
     utils.rabinPubKeyIndexArray,
+    Common.rabinPubKeyVerifyArray,
+    new Bytes(Common.rabinPubKeyHashArray.toString('hex')),
     new Bytes(inputTokenAddressArray.toString('hex')),
     new Bytes(inputTokenAmountArray.toString('hex')),
     nOutputs,

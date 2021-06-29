@@ -5,7 +5,10 @@ const token = module.exports
 
 // token specific
 //<type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimal_num(1 byte)> + <public key hash(20 bytes)> + <token value(8 bytes)> + <tokenid(36 bytes)> + <proto header>
-const TOKEN_ID_LEN = 36
+const TOKEN_ID_LEN = 20
+const SENSIBLE_ID_LEN = 36
+const RABIN_PUBKEY_HASH_ARRAY_HASH_LEN = 20;
+const GENESIS_HASH_LEN = 20;
 const TOKEN_AMOUNT_LEN = 8
 const TOKEN_ADDRESS_LEN = 20
 const DECIMAL_NUM_LEN = 1
@@ -13,8 +16,10 @@ const GENESIS_FLAG_LEN = 1
 const TOKEN_SYMBOL_LEN = 10
 const TOKEN_NAME_LEN = 20
 
-const TOKEN_ID_OFFSET = TOKEN_ID_LEN + proto.getHeaderLen()
-const TOKEN_AMOUNT_OFFSET = TOKEN_ID_OFFSET + TOKEN_AMOUNT_LEN
+const SENSIBLE_ID_OFFSET = SENSIBLE_ID_LEN + proto.getHeaderLen()
+const RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET = SENSIBLE_ID_OFFSET + RABIN_PUBKEY_HASH_ARRAY_HASH_LEN;
+const GENESIS_HASH_OFFSET = RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET + GENESIS_HASH_LEN;
+const TOKEN_AMOUNT_OFFSET = GENESIS_HASH_OFFSET + TOKEN_AMOUNT_LEN;
 const TOKEN_ADDRESS_OFFSET = TOKEN_AMOUNT_OFFSET + TOKEN_ADDRESS_LEN
 const DECIMAL_NUM_OFFSET = TOKEN_ADDRESS_OFFSET + DECIMAL_NUM_LEN
 const GENESIS_FLAG_OFFSET = DECIMAL_NUM_OFFSET + GENESIS_FLAG_LEN
@@ -28,6 +33,7 @@ token.EMPTY_ADDRESS = Buffer.alloc(TOKEN_ADDRESS_LEN, 0)
 
 
 token.PROTO_TYPE = 1
+token.nonGenesisFlag = Buffer.alloc(1, 0)
 
 token.OP_TRANSFER = 1
 token.OP_UNLOCK_FROM_CONTRACT = 2
@@ -41,7 +47,19 @@ token.getTokenAmount = function(script) {
 }
 
 token.getTokenID = function(script) {
-  return script.subarray(script.length - TOKEN_ID_OFFSET, script.length - TOKEN_ID_OFFSET + TOKEN_ID_LEN);
+  return bsv.crypto.Hash.sha256ripemd160(script.subarray(script.length - GENESIS_HASH_OFFSET, script.length - proto.getHeaderLen()))
+}
+
+token.getSensibleID = function(script) {
+  return script.subarray(script.length - SENSIBLE_ID_OFFSET, script.length - SENSIBLE_ID_OFFSET + SENSIBLE_ID_LEN);
+}
+
+token.getRabinPubKeyHashArrayHash = function(script) {
+  return script.subarray(script.length - RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET, script.length -  RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET + RABIN_PUBKEY_HASH_ARRAY_HASH_LEN)
+}
+
+token.getGenesisHash = function(script) {
+  return script.subarray(script.length - GENESIS_FLAG_OFFSET, script.length - GENESIS_FLAG_OFFSET + GENESIS_FLAG_LEN)
 }
 
 token.getTokenAddress = function(script) {
@@ -84,33 +102,15 @@ token.getNewTokenScript = function(scriptBuf, address, tokenAmount) {
     firstBuf,
     address,
     amountBuf,
-    scriptBuf.subarray(scriptBuf.length - TOKEN_ID_OFFSET, scriptBuf.length)
+    scriptBuf.subarray(scriptBuf.length - GENESIS_HASH_OFFSET, scriptBuf.length)
   ])
   return newScript
 }
 
-token.getNewTokenScriptFromGenesis = function(scriptBuf, addressBuf, tokenAmount, tokenID) {
-  const amountBuf = Buffer.alloc(8, 0)
-  amountBuf.writeBigUInt64LE(BigInt(tokenAmount))
-  const genesisFlag = Buffer.alloc(GENESIS_FLAG_LEN, 0)
-  const decimalBuf = scriptBuf.subarray(scriptBuf.length - DECIMAL_NUM_OFFSET, scriptBuf.length - DECIMAL_NUM_OFFSET + DECIMAL_NUM_LEN)
-  const firstBuf = scriptBuf.subarray(0, scriptBuf.length - GENESIS_FLAG_OFFSET)
+token.getNewGenesisScript = function(scriptBuf, sensibleID) {
   const newScript = Buffer.concat([
-    firstBuf,
-    genesisFlag,
-    decimalBuf,
-    addressBuf,
-    amountBuf,
-    tokenID,
-    scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
-  ])
-  return newScript
-}
-
-token.getNewGenesisScript = function(scriptBuf, tokenID) {
-  const newScript = Buffer.concat([
-    scriptBuf.subarray(0, scriptBuf.length - TOKEN_ID_OFFSET),
-    tokenID,
+    scriptBuf.subarray(0, scriptBuf.length - SENSIBLE_ID_OFFSET),
+    sensibleID,
     scriptBuf.subarray(scriptBuf.length - proto.getHeaderLen(), scriptBuf.length)
   ])
   return newScript

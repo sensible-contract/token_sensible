@@ -4,7 +4,6 @@ import "rabinUtil.scrypt";
 
 // opreturn + inputTokenIndexArray + nSenders(4 bytes) + receiverTokenAmountArray + receiverArray + nReceivers(4 bytes) + tokenCodeHash + tokenID
 contract TokenUnlockContractCheck {
-  int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
 
   static const int MAX_INPUT = 2;
   static const int MAX_OUTPUT = 5;
@@ -17,6 +16,8 @@ contract TokenUnlockContractCheck {
     bytes rabinPaddingArray,
     bytes rabinSigArray,
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyVerifyArray,
+    bytes rabinPubKeyHashArray,
     bytes inputTokenAddressArray,
     bytes inputTokenAmountArray,
     int nOutputs,
@@ -51,11 +52,14 @@ contract TokenUnlockContractCheck {
     pos += 4;
     bytes inputTokenIndexArray = scriptCode[scriptLen - pos - 4 * nSenders: scriptLen - pos];
 
+    // verify rabin pubkey hash array
+    bytes rabinPubKeyHashArrayHash = TokenProto.getRabinPubKeyHashArrayHash(tokenScript, tokenScriptLen);
+    RabinUtil.verifyRabinPubKey(rabinPubKeyHashArrayHash,rabinPubKeyHashArray, rabinPubKeyVerifyArray, rabinPubKeyIndexArray);
+
     bool isBurn = true;
     bool hasBurningAddress = false;
     int sumInputToken = 0;
     int paddingPos = 0;
-    RabinUtil.verifyRabinPubkeyIndexArray(rabinPubKeyIndexArray);
     require(nSenders <= MAX_INPUT);
     // max support loop num input token
     loop(MAX_INPUT): i {
@@ -64,8 +68,7 @@ contract TokenUnlockContractCheck {
         bytes rabinMsg = rabinMsgArray[i * RabinUtil.U4_RABIN_MSG_LEN: (i + 1) * RabinUtil.U4_RABIN_MSG_LEN];
         int verifyCount = 0;
         loop(RabinUtil.ORACLE_VERIFY_NUM): j {
-          int pubIndex = rabinPubKeyIndexArray[j];
-          int rabinPubKey = this.rabinPubKeyArray[pubIndex];
+          int rabinPubKey = rabinPubKeyVerifyArray[j];
           int arrayIndex = i * RabinUtil.ORACLE_VERIFY_NUM + j;
           int rabinSig = Util.fromLEUnsigned(rabinSigArray[arrayIndex * RabinUtil.RABIN_SIG_LEN: (arrayIndex + 1) * RabinUtil.RABIN_SIG_LEN]);
           int paddingLen = Util.fromLEUnsigned(rabinPaddingArray[paddingPos: paddingPos + RabinUtil.PADDING_SIZE_LEN]);
@@ -86,7 +89,7 @@ contract TokenUnlockContractCheck {
         require(u4.outpoint == prevouts[inputIndex * 36: (inputIndex + 1) * 36]);
 
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];
-        if (address != b'0000000000000000000000000000000000000000') {
+        if (address != TokenProto.BURN_ADDRESS) {
           isBurn = false;
         } else {
           hasBurningAddress = true;

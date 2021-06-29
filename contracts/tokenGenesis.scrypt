@@ -4,7 +4,6 @@ import "rabinUtil.scrypt";
 
 contract TokenGenesis {
   PubKey pubKey;
-  int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
 
   public function unlock(
     SigHashPreimage txPreimage,
@@ -13,6 +12,8 @@ contract TokenGenesis {
     bytes[RabinUtil.ORACLE_VERIFY_NUM] rabinPaddingArray,
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinSigArray,
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyArray,
+    bytes rabinPubKeyHashArray,
     int genesisSatoshis,
     bytes tokenScript,
     int tokenSatoshis,
@@ -38,11 +39,12 @@ contract TokenGenesis {
     require(address == b'0000000000000000000000000000000000000000');
     int tokenValue = TokenProto.getTokenAmount(genesisScript, dataLen);
     require(tokenValue == 0);
-    bytes tokenID = TokenProto.getTokenID(genesisScript, dataLen);
+    require(TokenProto.getGenesisHash(genesisScript, dataLen) == b'0000000000000000000000000000000000000000');
+    bytes sensibleID = TokenProto.getSensibleID(genesisScript, dataLen);
     bool isFirst = false;
-    if (tokenID == b'000000000000000000000000000000000000000000000000000000000000000000000000') {
+    if (sensibleID == b'000000000000000000000000000000000000000000000000000000000000000000000000') {
       isFirst = true;
-      tokenID = Util.outpoint(txPreimage);
+      sensibleID = Util.outpoint(txPreimage);
     } 
     int protoType = TokenProto.getProtoType(genesisScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
@@ -52,16 +54,22 @@ contract TokenGenesis {
     require(TokenProto.checkDataLen(genesisScript, dataLen));
     require(TokenProto.checkOpReturn(genesisScript, dataLen));
 
+    bytes rabinPubKeyHashArrayHash = TokenProto.getRabinPubKeyHashArrayHash(genesisScript, dataLen);
     // check the rabin msg
     if (!isFirst) {
-      bytes thisOutpoint = Util.outpoint(txPreimage);
-      int verifyCount = RabinUtil.verifyRabinMsg(this.rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray, rabinPubKeyIndexArray);
-      require(verifyCount == RabinUtil.ORACLE_VERIFY_NUM);
 
+      RabinUtil.verifyRabinPubKey(rabinPubKeyHashArrayHash,rabinPubKeyHashArray, rabinPubKeyArray, rabinPubKeyIndexArray);
+      RabinUtil.verifyRabinMsg(rabinPubKeyArray, rabinMsg, rabinPaddingArray, rabinSigArray);
+
+      bytes thisOutpoint = Util.outpoint(txPreimage);
       PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
       require(pl.byTxId == thisOutpoint[ : 32]);
-      require(pl.outpoint == tokenID || hash160(genesisScript) == pl.scriptHash);
+      require(pl.outpoint == sensibleID || hash160(genesisScript) == pl.scriptHash);
     }
+
+    // genesisHash
+    bytes newGenesisScript = TokenProto.getNewGenesisScript(genesisScript, len(genesisScript), sensibleID);
+    bytes genesisHash = hash160(newGenesisScript);
 
     // check tokenScript oracle data
     dataLen = len(tokenScript);
@@ -70,17 +78,18 @@ contract TokenGenesis {
     require(tokenSymbol == TokenProto.getTokenSymbol(tokenScript, dataLen));
     require(0 == TokenProto.getGenesisFlag(tokenScript, dataLen));
     require(decimalNum == TokenProto.getDecimalNum(tokenScript, dataLen));
-    require(tokenID == TokenProto.getTokenID(tokenScript, dataLen));
+    require(sensibleID == TokenProto.getSensibleID(tokenScript, dataLen));
     protoType = TokenProto.getProtoType(tokenScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
     require(TokenProto.PROTO_FLAG == TokenProto.getProtoFlag(tokenScript, dataLen));
+    require(rabinPubKeyHashArrayHash == TokenProto.getRabinPubKeyHashArrayHash(tokenScript, dataLen));
+    require(genesisHash == TokenProto.getGenesisHash(tokenScript, dataLen));
     // check opreturn
     require(TokenProto.checkDataLen(tokenScript, dataLen));
     require(TokenProto.checkOpReturn(tokenScript, dataLen));
 
     bytes genesisOutput = b'';
     if (genesisSatoshis > 0) {
-      bytes newGenesisScript = TokenProto.getNewGenesisScript(genesisScript, len(genesisScript), tokenID);
       genesisOutput = Util.buildOutput(newGenesisScript, genesisSatoshis);
     }
     bytes tokenOutput = Util.buildOutput(tokenScript, tokenSatoshis);

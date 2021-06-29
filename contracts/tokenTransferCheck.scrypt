@@ -3,7 +3,7 @@ import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
 
 // opreturn nSenders(4 bytes) + receiverTokenAmountArray + receiverArray + nReceivers(4 bytes) + tokenCodeHash + tokenID
-contract TokenRouteCheck {
+contract TokenTransferCheck {
 
   static const int MAX_INPUT = 3;
   static const int MAX_OUTPUT = 3;

@@ -3,34 +3,41 @@ import "txUtil.scrypt";
 
 library TokenProto {
 
-  static int OP_TRANSFER = 1;
-  static int OP_UNLOCK_FROM_CONTRACT = 2;
+  static const int OP_TRANSFER = 1;
+  static const int OP_UNLOCK_FROM_CONTRACT = 2;
+
+  static const bytes BURN_ADDRESS = b'0000000000000000000000000000000000000000';
 
   // flag is sensible
-  static bytes PROTO_FLAG = b'73656e7369626c65';
-  static int PROTO_TYPE = 1;
+  static const bytes PROTO_FLAG = b'73656e7369626c65';
+  static const int PROTO_TYPE = 1;
   // <type specific data> + <proto header>
   // <proto header> = <type(4 bytes)> + <'sensible'(8 bytes)>
-  //<token type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimailNum(1 byte)> + <address(20 bytes)> + <token amount(8 bytes)> + <tokenid(20 bytes)>
-  static int TOKEN_ID_LEN = 36;
-  static int TOKEN_AMOUNT_LEN = 8;
-  static int TOKEN_ADDRESS_LEN = 20;
-  static int DECIMAL_NUM_LEN = 1;
-  static int GENESIS_FLAG_LEN = 1;
-  static int TOKEN_SYMBOL_LEN = 10;
-  static int TOKEN_NAME_LEN = 20;
-  static int PROTO_TYPE_LEN = 4;
-  static int PROTO_FLAG_LEN = 8;
+  //<token type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimailNum(1 byte)> + <address(20 bytes)> + <token amount(8 bytes)> + <genesisHash(20 bytes)> + <rabinPubKeyHashArrayHash(20 bytes)> + <tokenid(20 bytes)>
+  static const int TOKEN_ID_LEN = 20;
+  static const int SENSIBLE_ID_LEN = 36;
+  static const int RABIN_PUBKEY_HASH_ARRAY_HASH_LEN = 20;
+  static const int GENESIS_HASH_LEN = 20;
+  static const int TOKEN_AMOUNT_LEN = 8;
+  static const int TOKEN_ADDRESS_LEN = 20;
+  static const int DECIMAL_NUM_LEN = 1;
+  static const int GENESIS_FLAG_LEN = 1;
+  static const int TOKEN_SYMBOL_LEN = 10;
+  static const int TOKEN_NAME_LEN = 20;
+  static const int PROTO_TYPE_LEN = 4;
+  static const int PROTO_FLAG_LEN = 8;
 
-  static int TYPE_OFFSET = TokenProto.PROTO_TYPE_LEN + TokenProto.PROTO_FLAG_LEN;
-  static int TOKEN_ID_OFFSET = TokenProto.TOKEN_ID_LEN + TokenProto.TYPE_OFFSET;
-  static int TOKEN_AMOUNT_OFFSET = TokenProto.TOKEN_ID_OFFSET + TokenProto.TOKEN_AMOUNT_LEN;
-  static int TOKEN_ADDRESS_OFFSET = TokenProto.TOKEN_AMOUNT_OFFSET + TokenProto.TOKEN_ADDRESS_LEN;
-  static int DECIMAL_NUM_OFFSET = TokenProto.TOKEN_ADDRESS_OFFSET + TokenProto.DECIMAL_NUM_LEN;
-  static int GENESIS_FLAG_OFFSET = TokenProto.DECIMAL_NUM_OFFSET + TokenProto.GENESIS_FLAG_LEN;
-  static int TOKEN_SYMBOL_OFFSET = TokenProto.GENESIS_FLAG_OFFSET + TokenProto.TOKEN_SYMBOL_LEN;
-  static int TOKEN_NAME_OFFSET = TokenProto.TOKEN_SYMBOL_OFFSET + TokenProto.TOKEN_NAME_LEN;
-  static int DATA_LEN = TokenProto.TOKEN_NAME_OFFSET;
+  static const int TYPE_OFFSET = PROTO_TYPE_LEN + PROTO_FLAG_LEN;
+  static const int SENSIBLE_ID_OFFSET = SENSIBLE_ID_LEN + TYPE_OFFSET;
+  static const int RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET = SENSIBLE_ID_OFFSET + RABIN_PUBKEY_HASH_ARRAY_HASH_LEN;
+  static const int GENESIS_HASH_OFFSET = RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET + GENESIS_HASH_LEN;
+  static const int TOKEN_AMOUNT_OFFSET = GENESIS_HASH_OFFSET + TOKEN_AMOUNT_LEN;
+  static const int TOKEN_ADDRESS_OFFSET = TOKEN_AMOUNT_OFFSET + TOKEN_ADDRESS_LEN;
+  static const int DECIMAL_NUM_OFFSET = TOKEN_ADDRESS_OFFSET + DECIMAL_NUM_LEN;
+  static const int GENESIS_FLAG_OFFSET = DECIMAL_NUM_OFFSET + GENESIS_FLAG_LEN;
+  static const int TOKEN_SYMBOL_OFFSET = GENESIS_FLAG_OFFSET + TOKEN_SYMBOL_LEN;
+  static const int TOKEN_NAME_OFFSET = TOKEN_SYMBOL_OFFSET + TOKEN_NAME_LEN;
+  static const int DATA_LEN = TOKEN_NAME_OFFSET;
 
   static function getProtoData(bytes script, int slen): bytes {
     return script[slen - TokenProto.DATA_LEN: slen];
@@ -57,11 +64,23 @@ library TokenProto {
   }
 
   static function getNewTokenScript(bytes script, int slen, bytes address, int tokenValue): bytes {
-    return script[0: slen - TokenProto.TOKEN_ADDRESS_OFFSET] + address +  Util.toLEUnsigned(tokenValue, 8) + script[slen - TokenProto.TOKEN_ID_OFFSET: slen];
+    return script[0: slen - TokenProto.TOKEN_ADDRESS_OFFSET] + address +  Util.toLEUnsigned(tokenValue, 8) + script[slen - TokenProto.GENESIS_HASH_OFFSET: slen];
+  }
+
+  static function getGenesisHash(bytes script, int slen): bytes {
+    return script[slen - GENESIS_HASH_OFFSET: slen - GENESIS_HASH_OFFSET + GENESIS_HASH_LEN];
+  }
+
+  static function getRabinPubKeyHashArrayHash(bytes script, int slen): bytes {
+    return script[slen - RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET: slen - RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET + RABIN_PUBKEY_HASH_ARRAY_HASH_LEN];
+  }
+
+  static function getSensibleID(bytes script, int slen): bytes {
+    return script[slen - SENSIBLE_ID_OFFSET: slen - SENSIBLE_ID_OFFSET + SENSIBLE_ID_LEN];
   }
 
   static function getTokenID(bytes script, int slen): bytes {
-    return script[slen - TokenProto.TOKEN_ID_OFFSET: slen - TokenProto.TOKEN_ID_OFFSET + TokenProto.TOKEN_ID_LEN];
+    return hash160(script[slen - GENESIS_HASH_OFFSET: slen - TokenProto.TYPE_OFFSET]);
   }
 
   static function getGenesisFlag(bytes script, int slen): int {
@@ -105,7 +124,7 @@ library TokenProto {
     return tokenCode + codeHash + tokenName + b'00' + decimalNum + tokenAddress + Util.toLEUnsigned(tokenAmount, 8) + tokenID + Util.toLEUnsigned(TokenProto.PROTO_TYPE, 4) + TokenProto.PROTO_FLAG;
   }
 
-  static function getNewGenesisScript(bytes script, int slen, bytes tokenID): bytes {
-    return script[: slen - TokenProto.TOKEN_ID_OFFSET] + tokenID + script[slen - TokenProto.TYPE_OFFSET: ];
+  static function getNewGenesisScript(bytes script, int slen, bytes sensibleID): bytes {
+    return script[: slen - TokenProto.SENSIBLE_ID_OFFSET] + sensibleID + script[slen - TokenProto.TYPE_OFFSET: ];
   }
 }

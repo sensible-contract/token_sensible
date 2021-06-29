@@ -92,11 +92,9 @@ contract TokenGenesis {
       opReturnOutput = Util.buildOutput(opReturnScript, 0);
     }
 
-    bytes changeOutput = b'';
-    if (changeSatoshis > 0) {
-      bytes changeScript = Util.buildPublicKeyHashScript(changeAddress);
-      changeOutput = Util.buildOutput(changeScript, changeSatoshis);
-    }
+    // bsv change output
+    bytes changeOutput = TxUtil.genBsvOutput(changeSatoshis, changeAddress);
+
     bytes hashOutput = hash256(genesisOutput + tokenOutput + opReturnOutput + changeOutput);
     require(hashOutput == Util.hashOutputs(txPreimage));
   }

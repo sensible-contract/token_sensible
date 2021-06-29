@@ -24,7 +24,7 @@ const toBufferLE = Common.toBufferLE
 
 const TokenUtil = module.exports
 
-TokenUtil.RABIN_SIG_LEN = 128
+TokenUtil.RABIN_SIG_LEN = 384
 
 const genesisFlag = Buffer.from('01', 'hex')
 const nonGenesisFlag = Buffer.from('00', 'hex')

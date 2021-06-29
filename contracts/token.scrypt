@@ -104,13 +104,13 @@ contract Token {
       hashArray = this.unlockContractCodeHashArray;
 
       // verify the lockContractTx
-      bytes prevScriptTxId = prevouts[lockContractInputIndex * TxUtil.OUTPOINT_LEN: lockContractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
-      require(hash256(lockContractTx) == prevScriptTxId);
-
       bytes contractHash = TokenProto.getTokenAddress(tokenScript, scriptLen);
 
       // burning address
       if (contractHash != b'0000000000000000000000000000000000000000') {
+        bytes prevScriptTxId = prevouts[lockContractInputIndex * TxUtil.OUTPOINT_LEN: lockContractInputIndex * TxUtil.OUTPOINT_LEN + TxUtil.TX_ID_LEN];
+        require(hash256(lockContractTx) == prevScriptTxId);
+
         bytes prevScriptCode = TxUtil.readOutputScript(lockContractTx, lockContractTxOutIndex);
 
         require(hash160(prevScriptCode) == contractHash);

@@ -91,4 +91,13 @@ library TxUtil {
       }
       return res;
   }
+
+  static function genBsvOutput(int satoshis, Ripemd160 address): bytes {
+    bytes output = b'';
+    if (satoshis > 0) {
+      bytes outputScript = Util.buildPublicKeyHashScript(address);
+      output = Util.buildOutput(outputScript, satoshis);
+    }
+    return output;
+  }
 }

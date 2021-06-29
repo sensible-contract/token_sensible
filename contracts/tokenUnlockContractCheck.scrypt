@@ -6,7 +6,7 @@ import "rabinUtil.scrypt";
 contract TokenUnlockContractCheck {
   int[RabinUtil.ORACLE_NUM] rabinPubKeyArray;
 
-  static const int MAX_INPUT = 3;
+  static const int MAX_INPUT = 2;
   static const int MAX_OUTPUT = 5;
     
   public function unlock(

@@ -109,17 +109,16 @@ contract TokenRouteCheck {
     require(sumInputToken == sumOutputToken);
 
     // op_false op_return output
+    // optional
     if (len(opReturnScript) > 0) {
       require(opReturnScript[0:2] == b'006a');
       bytes opReturnOutput = Util.buildOutput(opReturnScript, 0);
       outputs = outputs + opReturnOutput;
     }
 
-    if (changeSatoshis > 0) {
-      bytes outputScript = Util.buildPublicKeyHashScript(changeAddress);
-      bytes output = Util.buildOutput(outputScript, changeSatoshis);
-      outputs = outputs + output;
-    }
+    // bsv change output
+    bytes changeOutput = TxUtil.genBsvOutput(changeSatoshis, changeAddress);
+    outputs = outputs +  changeOutput;
 
     bytes hashOutputs = hash256(outputs);
     require(hashOutputs == Util.hashOutputs(txPreimage));

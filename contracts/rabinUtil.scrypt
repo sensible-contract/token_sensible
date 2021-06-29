@@ -17,17 +17,17 @@ struct PayloadU4SpendByData {
 
 library RabinUtil {
 
-  static const int ORACLE_NUM = 3;
-  static const int ORACLE_VERIFY_NUM = 2;
+  static const int ORACLE_NUM = 5;
+  static const int ORACLE_VERIFY_NUM = 3;
   //static const int ORACLE_VERIFY_NUM2 = ORACLE_VERIFY_NUM - 1;
-  static const int ORACLE_VERIFY_NUM2 = 1;
+  static const int ORACLE_VERIFY_NUM2 = 2;
 
   // u4 rabin msg common format:
   // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <contractHash(20 bytes)>
   // rabin sig length
   static int U4_RABIN_MSG_LEN = 64;
-  // 128 bytes, 1024 bits
-  static int RABIN_SIG_LEN = 128;
+  // 384 bytes, 3072 bits
+  static int RABIN_SIG_LEN = 384;
   static int PADDING_SIZE_LEN = 2;
 
   static function rabinHash(bytes x): int {
@@ -39,7 +39,6 @@ library RabinUtil {
 
   static function verifyRabinMsg(int[RabinUtil.ORACLE_NUM] rabinPubKeyArray, bytes rabinMsg, bytes[RabinUtil.ORACLE_VERIFY_NUM] paddingArray, int[RabinUtil.ORACLE_VERIFY_NUM] sigArray, int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray): int {
     int verifyCount = 0;
-    int paddingPos = 0;
 
     RabinUtil.verifyRabinPubkeyIndexArray(rabinPubKeyIndexArray);
 

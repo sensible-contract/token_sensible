@@ -34,6 +34,18 @@ const { rabinPubKeyArray, rabinPubKeyIndexArray } = require('./utils');
 
 let tx
 const outputAmount = inputSatoshis
+const genContract = Utils.genContract
+
+let Token, Genesis, RouteCheck, UnlockContractCheck
+function initContract() {
+  const use_desc = false
+  const use_release = true
+  Genesis = genContract('tokenGenesis', use_desc, use_release)
+  Token = genContract('token', use_desc, use_release)
+  RouteCheck = genContract('tokenRouteCheck', use_desc, use_release)
+  UnlockContractCheck = genContract('tokenUnlockContractCheck', use_desc, use_release)
+}
+initContract()
 
 const tokenName = Buffer.alloc(20, 0)
 tokenName.write('test token name')
@@ -45,8 +57,6 @@ const nonGenesisFlag = Buffer.from('00', 'hex')
 const tokenType = Buffer.alloc(4, 0)
 tokenType.writeUInt32LE(1)
 const PROTO_FLAG = Proto.PROTO_FLAG
-const Genesis = buildContractClass(compileContract('tokenGenesis.scrypt'))
-const Token = buildContractClass(compileContract('token.scrypt'))
 const address1 = privateKey.toAddress()
 const tokenValue = 1000000
 const buffValue = Buffer.alloc(8, 0)
@@ -54,7 +64,6 @@ buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const decimalNum = Buffer.from('08', 'hex')
 const routeCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
 const routeCheckCodeHashArray = [routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash, routeCheckCodeHash]
-const unlockContractCodeHash = routeCheckCodeHash
 const unlockContractCodeHashArray = routeCheckCodeHashArray
 let genesisHash
 const tokenID = Buffer.concat([

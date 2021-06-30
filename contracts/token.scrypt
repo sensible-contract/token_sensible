@@ -8,7 +8,7 @@ import "rabinUtil.scrypt";
  */
 contract Token {
 
-  bytes[5] routeContractCodeHashArray;
+  bytes[5] transferContractCodeHashArray;
   bytes[5] unlockContractCodeHashArray;
 
   function verifyAmountCheckContract(
@@ -92,7 +92,7 @@ contract Token {
 
     if (operation == TokenProto.OP_TRANSFER) {
       require(nReceivers > 0);
-      hashArray = this.routeContractCodeHashArray;
+      hashArray = this.transferContractCodeHashArray;
       // authorize
       require(hash160(senderPubKey) == senderAddress);
       require(checkSig(senderSig, senderPubKey));

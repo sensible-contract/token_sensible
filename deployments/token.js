@@ -99,20 +99,20 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex, tokenContract)
 
   let bsvFeeTx = tokenTx
   let bsvFeeOutputIndex = tokenTx.outputs.length - 1
-  const [rtransferCheck, rtransferCheckTx] = TokenUtil.createTransferCheckTx(bsvFeeTx, bsvFeeOutputIndex, privateKey, dustLimit, fee, address1, 1, tokenOutputArray, tokenID, tokenCodeHash)
+  const [transferCheck, transferCheckTx] = TokenUtil.createTransferCheckTx(bsvFeeTx, bsvFeeOutputIndex, privateKey, dustLimit, fee, address1, 1, tokenOutputArray, tokenID, tokenCodeHash)
 
   fee = 30000
   const changeAddress = address1
   const satoshiInput = {
-    tx: rtransferCheckTx,
+    tx: transferCheckTx,
     outputIndex: 1
   }
   satoshiInputArray.push(satoshiInput)
   satoshiInputPrivKeyArray.push(privateKey)
 
   const tx = TokenUtil.createTokenTransfer(
-    rtransferCheckTx,
-    rtransferCheck,
+    transferCheckTx,
+    transferCheck,
     tokenInputArray,
     satoshiInputArray,
     Common.rabinPubKeyArray,
@@ -125,7 +125,7 @@ function createTokenTransferTx(genesisTx, tokenTx, tokenOutIndex, tokenContract)
 
   //console.log('createTokenTransferTx', tx.id, tx.serialize())
   const transferTx = tx
-  return [rtransferCheckTx, transferTx]
+  return [transferCheckTx, transferTx]
 }
 
 (async() => {

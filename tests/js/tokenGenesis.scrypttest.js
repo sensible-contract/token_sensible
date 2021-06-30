@@ -62,9 +62,9 @@ const tokenValue = 1000000
 const buffValue = Buffer.alloc(8, 0)
 buffValue.writeBigUInt64LE(BigInt(tokenValue))
 const decimalNum = Buffer.from('08', 'hex')
-const rtransferCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
-const rtransferCheckCodeHashArray = [rtransferCheckCodeHash, rtransferCheckCodeHash, rtransferCheckCodeHash, rtransferCheckCodeHash, rtransferCheckCodeHash]
-const unlockContractCodeHashArray = rtransferCheckCodeHashArray
+const transferCheckCodeHash = new Bytes(Buffer.alloc(20, 0).toString('hex'))
+const transferCheckCodeHashArray = [transferCheckCodeHash, transferCheckCodeHash, transferCheckCodeHash, transferCheckCodeHash, transferCheckCodeHash]
+const unlockContractCodeHashArray = transferCheckCodeHashArray
 const sensibleID = Buffer.concat([
   Buffer.from(dummyTxId, 'hex').reverse(),
   Buffer.alloc(4, 0),
@@ -80,7 +80,7 @@ function createToken(oracleData, options={}) {
     satoshis: outputAmount
   }))
 
-  const token = new Token(rtransferCheckCodeHashArray, unlockContractCodeHashArray)
+  const token = new Token(transferCheckCodeHashArray, unlockContractCodeHashArray)
   token.setDataPart(oracleData.toString('hex'))
   const lockingScript = token.lockingScript
   tx.addOutput(new bsv.Transaction.Output({
@@ -193,7 +193,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       satoshis: outputAmount
     }))
 
-    const token = new Token(rtransferCheckCodeHashArray, unlockContractCodeHashArray)
+    const token = new Token(transferCheckCodeHashArray, unlockContractCodeHashArray)
     token.setDataPart(oracleData.toString('hex'))
     const lockingScript = token.lockingScript
     tx.addOutput(new bsv.Transaction.Output({

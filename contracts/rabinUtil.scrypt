@@ -92,7 +92,7 @@ library RabinUtil {
 
     loop(RabinUtil.ORACLE_VERIFY_NUM2): i {
         require(rabinPubKeyIndexArray[i + 1] > rabinPubKeyIndexArray[i]);
-        bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[rabinPubKeyIndexArray[i]], RABIN_PUBKEY_LEN);
+        bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[i], RABIN_PUBKEY_LEN);
         require(rabinPubKeyHashArray[i * 20: (i + 1) * 20] == hash160(rabinBytes));
     }
     int index = rabinPubKeyIndexArray[RabinUtil.ORACLE_VERIFY_NUM - 1];
@@ -127,15 +127,8 @@ library RabinUtil {
     return true;
   }
 
-  static function verifyRabinPubkeyIndexArray(int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray): bool {
-    loop(RabinUtil.ORACLE_VERIFY_NUM2): i {
-        require(rabinPubKeyIndexArray[i + 1] > rabinPubKeyIndexArray[i]);
-    }
-    return true;
-  }
-
   static function verifyOtherInput(
-    int[RabinUtil.ORACLE_NUM] rabinPubKeyArray, 
+    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyVerifyArray, 
     bytes rabinMsg,
     bytes[RabinUtil.ORACLE_VERIFY_NUM] rabinPaddingArray, 
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinSigArray,
@@ -145,10 +138,8 @@ library RabinUtil {
     bytes inputScript
     ): bool {
     int verifyCount = 0;
-    RabinUtil.verifyRabinPubkeyIndexArray(rabinPubKeyIndexArray);
     loop(RabinUtil.ORACLE_VERIFY_NUM): i {
-      int pubIndex = rabinPubKeyIndexArray[i];
-      int rabinPubKey = rabinPubKeyArray[pubIndex];
+      int rabinPubKey = rabinPubKeyVerifyArray[i];
       int rabinSig = rabinSigArray[i];
       bytes padding = rabinPaddingArray[i];
       int h = RabinUtil.rabinHash(rabinMsg + padding);

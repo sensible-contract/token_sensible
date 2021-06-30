@@ -21,6 +21,7 @@ library RabinUtil {
   static const int ORACLE_VERIFY_NUM = 3;
   //static const int ORACLE_VERIFY_NUM2 = ORACLE_VERIFY_NUM - 1;
   static const int ORACLE_VERIFY_NUM2 = 2;
+  static const int RABIN_HASH_TIMES = 11;
 
   // u4 rabin msg common format:
   // <txid(32 bytes)> + <outputIndex(4 bytes)> + <outputSatoshi(8 bytes)> + <contractHash(20 bytes)>
@@ -32,10 +33,12 @@ library RabinUtil {
   static int PADDING_SIZE_LEN = 2;
 
   static function rabinHash(bytes x): int {
-    // expand into 512 bit hash
-    bytes hx = sha256(x);
-    int idx = len(hx) / 2;
-    return unpack(sha256(hx[:idx]) + sha256(hx[idx:]) + b'00');
+    // expand hash
+    bytes hash = sha256(x);
+    loop(RABIN_HASH_TIMES) {
+      hash += sha256(hash);
+    }
+    return unpack(hash + b'00');
   }
 
   static function verifyRabinMsg(int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyArray, bytes rabinMsg, bytes[RabinUtil.ORACLE_VERIFY_NUM] paddingArray, int[RabinUtil.ORACLE_VERIFY_NUM] sigArray): bool {

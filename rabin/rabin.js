@@ -55,12 +55,22 @@ function powerMod(base, exponent, modulus) {
     return result;
 }
 
-function rabinHashBytes(bytes) {
+/*function rabinHashBytes(bytes) {
     hBytes = crypto.createHash('sha256').update(bytes).digest();
     let idx = hBytes.byteLength / 2;
     let hl = crypto.createHash('sha256').update(hBytes.slice(0, idx)).digest();
     let hr = crypto.createHash('sha256').update(hBytes.slice(idx, hBytes.byteLength)).digest();
     return toBigIntLE(Buffer.concat([hl, hr]));
+}*/
+function rabinHashBytes(bytes) {
+    hBytes = crypto.createHash('sha256').update(bytes).digest();
+    for (let i = 0; i < 11; i++) {
+        hBytes = Buffer.concat([
+            hBytes,
+            crypto.createHash('sha256').update(hBytes).digest(),
+        ])
+    }
+    return toBigIntLE(hBytes);
 }
 
 function calculateNextPrime(p) {

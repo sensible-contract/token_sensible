@@ -27,9 +27,6 @@ const toBufferLE = Common.toBufferLE
 
 const utils = module.exports
 
-utils.rabinPrivateKey = Common.rabinPrivateKey
-utils.rabinPubKey = privKeyToPubKey(utils.rabinPrivateKey.p, utils.rabinPrivateKey.q)
-
 utils.oracleNum = Common.oracleNum
 utils.oracleVerifyNum = Common.oracleVerifyNum
 utils.rabinPubKeyArray = Common.rabinPubKeyArray
@@ -62,29 +59,6 @@ utils.addOutput = function(tx, lockingScript, outputSatoshis=inputSatoshis) {
     satoshis: outputSatoshis
   }))
   //console.log('addOutput: output:', tx.outputs.length, tx.outputs[tx.outputs.length-1].toBufferWriter().toBuffer().toString('hex'))
-}
-
-utils.createRabinMsg = function(txid, outputIndex, satoshis, scriptBuf, spendByTxId=null) {
-  const scriptHash = bsv.crypto.Hash.sha256ripemd160(scriptBuf)
-  let rabinMsg = Buffer.concat([
-    TokenUtil.getTxIdBuf(txid),
-    TokenUtil.getUInt32Buf(outputIndex),
-    TokenUtil.getUInt64Buf(satoshis),
-    scriptHash
-  ])
-  if (spendByTxId !== null) {
-    rabinMsg = Buffer.concat([rabinMsg, TokenUtil.getTxIdBuf(spendByTxId)])
-  }
-  let rabinSignResult = sign(rabinMsg.toString('hex'), utils.rabinPrivateKey.p, utils.rabinPrivateKey.q, utils.rabinPubKey)
-  const rabinSign = rabinSignResult.signature
-  const rabinPadding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
-  let rabinPaddingArray = []
-  let rabinSigArray = []
-  for (let i = 0; i < utils.oracleVerifyNum; i++) {
-    rabinPaddingArray.push(new Bytes(rabinPadding.toString('hex')))
-    rabinSigArray.push(rabinSign)
-  }
-  return [rabinMsg, rabinPaddingArray, rabinSigArray]
 }
 
 utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIndex, prevouts, inputTokenIndexes, tokenOutputIndexes, expected=true) {
@@ -125,19 +99,20 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
       TokenUtil.getUInt64Buf(TokenProto.getTokenAmount(tokenScript.toBuffer()))
     ])
 
-    const rabinSignResult = sign(msg.toString('hex'), utils.rabinPrivateKey.p, utils.rabinPrivateKey.q, utils.rabinPubKey)
-    let padding = Buffer.concat([
-      TokenUtil.getUInt16Buf(rabinSignResult.paddingByteCount),
-      Buffer.alloc(rabinSignResult.paddingByteCount)
-    ])
-    for (let i = 0; i < utils.oracleVerifyNum; i++) {
+    for (let j = 0; j < utils.oracleVerifyNum; j++) {
+      const idx = Common.rabinPubKeyIndexArray[j]
+      const rabinPrivateKey = Common.rabinPrivateKeys[idx]
+      const rabinPubKey = Common.rabinPubKeyArray[idx]
+      const rabinSignResult = sign(msg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
+      let padding = Buffer.concat([
+        TokenUtil.getUInt16Buf(rabinSignResult.paddingByteCount),
+        Buffer.alloc(rabinSignResult.paddingByteCount)
+      ])
       inputRabinPaddingArray = Buffer.concat([
         inputRabinPaddingArray,
         padding
       ])
-    }
-    const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
-    for (let i = 0; i < utils.oracleVerifyNum; i++) {
+      const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
       inputRabinSignArray = Buffer.concat([
         inputRabinSignArray,
         sigBuf

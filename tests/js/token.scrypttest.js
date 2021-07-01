@@ -35,8 +35,6 @@ const addInput = Utils.addInput
 const addOutput = Utils.addOutput
 const genContract = Utils.genContract
 
-const rabinPrivateKey = Common.rabinPrivateKey
-const rabinPubKey = Common.rabinPubKey
 const rabinPubKeyHashArray = Common.rabinPubKeyHashArray
 const rabinPubKeyVerifyArray =  Common.rabinPubKeyVerifyArray
 
@@ -81,8 +79,8 @@ const maxOutputLimit = 3
 let Token, TransferCheck, UnlockContractCheck, TokenSell
 
 function initContract() {
-  const use_desc = false
-  const use_release = false
+  const use_desc = true
+  const use_release = true
   Genesis = genContract('tokenGenesis', use_desc, use_release)
   Token = genContract('token', use_desc, use_release)
   TransferCheck = genContract('tokenTransferCheck', use_desc, use_release)
@@ -281,17 +279,21 @@ function verifyTransferCheck(tx, rabinPubKeyIndexArray, prevouts, transferCheck,
     //console.log('rabinsignature:', msg.toString('hex'), rabinSignResult.paddingByteCount, rabinSignResult.signature)
 
     for (let j = 0; j < Utils.oracleVerifyNum; j++) {
+      const idx = Common.rabinPubKeyIndexArray[j]
+      const rabinPrivateKey = Common.rabinPrivateKeys[idx]
+      const rabinPubKey = Common.rabinPubKeyArray[idx]
       const rabinSignResult = sign(rabinMsg.toString('hex'), rabinPrivateKey.p, rabinPrivateKey.q, rabinPubKey)
-      const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
-      rabinSignArray = Buffer.concat([rabinSignArray, sigBuf])
-      const paddingCountBuf = Buffer.alloc(2, 0)
-      paddingCountBuf.writeUInt16LE(rabinSignResult.paddingByteCount)
-      const padding = Buffer.alloc(rabinSignResult.paddingByteCount, 0)
+      let padding = Buffer.concat([
+        TokenUtil.getUInt16Buf(rabinSignResult.paddingByteCount),
+        Buffer.alloc(rabinSignResult.paddingByteCount)
+      ])
       rabinPaddingArray = Buffer.concat([
         rabinPaddingArray,
-        paddingCountBuf,
         padding
       ])
+
+      const sigBuf = toBufferLE(rabinSignResult.signature, TokenUtil.RABIN_SIG_LEN)
+      rabinSignArray = Buffer.concat([rabinSignArray, sigBuf])
     }
   }
 
@@ -419,7 +421,7 @@ function verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nOut
   const prevTokenAddress = address2.hashBuffer
   const prevTokenAmount = 1999
   const scriptBuf = TokenProto.getNewTokenScript(token.lockingScript.toBuffer(), prevTokenAddress, prevTokenAmount)
-  const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, inputIndex, inputSatoshis, scriptBuf, dummyTxId)
+  const [rabinMsg, rabinPaddingArray, rabinSigArray] = Common.createRabinMsg(dummyTxId, inputIndex, inputSatoshis, scriptBuf, dummyTxId)
 
   const result = token.unlock(
     new SigHashPreimage(toHex(preimage)),
@@ -588,7 +590,7 @@ function simpleRouteUnlock(preUtxoId, preUtxoOutputIndex, scriptBuf, options={})
   const preimage = getPreimage(tx, token.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
   const sig = signTx(tx, privateKey, token.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
 
-  let [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(preUtxoId, preUtxoOutputIndex, inputSatoshis, scriptBuf, dummyTxId)
+  let [rabinMsg, rabinPaddingArray, rabinSigArray] = Common.createRabinMsg(preUtxoId, preUtxoOutputIndex, inputSatoshis, scriptBuf, dummyTxId)
   if (options.wrongRabin) {
     rabinSigArray = Array(Utils.oracleVerifyNum).fill(0)
   }

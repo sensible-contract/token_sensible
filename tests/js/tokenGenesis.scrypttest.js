@@ -31,6 +31,7 @@ const Proto = require('../../deployments/protoheader')
 const TokenProto = require('../../deployments/tokenProto')
 const Utils = require('./utils');
 const { rabinPubKeyVerifyArray, rabinPubKeyIndexArray, rabinPubKeyHashArray, rabinPubKeyHashArrayHash } = require('../../deployments/common');
+const Common = require('../../deployments/common')
 
 let tx
 const outputAmount = inputSatoshis
@@ -38,8 +39,8 @@ const genContract = Utils.genContract
 
 let Token, Genesis, TransferCheck, UnlockContractCheck
 function initContract() {
-  const use_desc = false
-  const use_release = false
+  const use_desc = true
+  const use_release = true
   Genesis = genContract('tokenGenesis', use_desc, use_release)
   Token = genContract('token', use_desc, use_release)
   TransferCheck = genContract('tokenTransferCheck', use_desc, use_release)
@@ -101,7 +102,7 @@ function createToken(oracleData, options={}) {
     inputSatoshis: inputAmount
   }
 
-  const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, 0, inputAmount, genesisScript.toBuffer(), dummyTxId)
+  const [rabinMsg, rabinPaddingArray, rabinSigArray] = Common.createRabinMsg(dummyTxId, 0, inputAmount, genesisScript.toBuffer(), dummyTxId)
 
   result = genesis.unlock(
     new SigHashPreimage(toHex(preimage)), 
@@ -214,7 +215,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       inputSatoshis: outputAmount
     }
 
-    const [rabinMsg, rabinPaddingArray, rabinSigArray] = Utils.createRabinMsg(dummyTxId, 0, inputAmount, genesisScript.toBuffer(), prevTx.id)
+    const [rabinMsg, rabinPaddingArray, rabinSigArray] = Common.createRabinMsg(dummyTxId, 0, inputAmount, genesisScript.toBuffer(), prevTx.id)
 
     const genesis = new Genesis(new PubKey(toHex(issuerPubKey)))
     oracleData = Buffer.concat([

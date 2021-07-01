@@ -93,7 +93,8 @@ library RabinUtil {
     loop(RabinUtil.ORACLE_VERIFY_NUM2): i {
         require(rabinPubKeyIndexArray[i + 1] > rabinPubKeyIndexArray[i]);
         bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[i], RABIN_PUBKEY_LEN);
-        require(rabinPubKeyHashArray[i * 20: (i + 1) * 20] == hash160(rabinBytes));
+        int idx = rabinPubKeyIndexArray[i];
+        require(rabinPubKeyHashArray[idx * 20: (idx + 1) * 20] == hash160(rabinBytes));
     }
     int index = rabinPubKeyIndexArray[RabinUtil.ORACLE_VERIFY_NUM - 1];
     bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[RabinUtil.ORACLE_VERIFY_NUM - 1], RABIN_PUBKEY_LEN);

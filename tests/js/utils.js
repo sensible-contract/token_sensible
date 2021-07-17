@@ -61,7 +61,7 @@ utils.addOutput = function(tx, lockingScript, outputSatoshis=inputSatoshis) {
   //console.log('addOutput: output:', tx.outputs.length, tx.outputs[tx.outputs.length-1].toBufferWriter().toBuffer().toString('hex'))
 }
 
-utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIndex, prevouts, inputTokenIndexes, tokenOutputIndexes, expected=true) {
+utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIndex, prevouts, inputTokenIndexes, tokenOutputIndexes, expected=true, fake=false) {
 
   const sigtype = bsv.crypto.Signature.SIGHASH_ALL | bsv.crypto.Signature.SIGHASH_FORKID
   const preimage = getPreimage(tx, unlockContractCheck.lockingScript.toASM(), inputSatoshis, inputIndex=inputIndex, sighashType=sigtype)
@@ -124,7 +124,7 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
   let tokenOutputSatoshiArray = Buffer.alloc(0)
   let tokenOutputIndexArray = Buffer.alloc(0)
   let j = 0;
-  const nOutputs = tx.outputs.length
+  let nOutputs = tx.outputs.length
   for (let i = 0; i < nOutputs; i++) {
     const tokenOutIndex = tokenOutputIndexes[j]
     if (i == tokenOutIndex) {
@@ -139,12 +139,27 @@ utils.verifyTokenUnlockContractCheck = function(tx, unlockContractCheck, inputIn
       j++
     } else {
       const output = tx.outputs[i].toBufferWriter().toBuffer()
-      otherOutputArray = Buffer.concat([
-        otherOutputArray,
-        TokenUtil.getUInt32Buf(output.length),
-        output
-      ])
+      if (fake === true) {
+        otherOutputArray = Buffer.concat([
+          otherOutputArray,
+          output
+        ])
+      } else {
+        otherOutputArray = Buffer.concat([
+          otherOutputArray,
+          TokenUtil.getUInt32Buf(output.length),
+          output
+        ])
+      }
     }
+  }
+
+  if (fake === true) {
+    otherOutputArray = Buffer.concat([
+      TokenUtil.getUInt32Buf(otherOutputArray.length),
+      otherOutputArray
+    ])
+    nOutputs = 2
   }
 
   const result = unlockContractCheck.unlock(

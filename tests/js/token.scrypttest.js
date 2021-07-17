@@ -79,8 +79,8 @@ const maxOutputLimit = 3
 let Token, TransferCheck, UnlockContractCheck, TokenSell
 
 function initContract() {
-  const use_desc = true
-  const use_release = true
+  const use_desc = false
+  const use_release = false
   Genesis = genContract('tokenGenesis', use_desc, use_release)
   Token = genContract('token', use_desc, use_release)
   TransferCheck = genContract('tokenTransferCheck', use_desc, use_release)
@@ -463,6 +463,112 @@ function createTokenSellContract(sellSatoshis) {
   }))
 
   return [tokenSell, tx]
+}
+
+function unlockFromContractFake(args) {
+
+  const nTokenInputs = 1
+  const nTokenOutputs = 1
+  const nOtherOutputs = 1
+  const tokenExpected = args.tokenExpected
+  const checkExpected = args.checkExpected
+  let rabinPubKeyIndexArray = Utils.rabinPubKeyIndexArray
+  if (args.wrongRabinPubKeyIndex) {
+    rabinPubKeyIndexArray = Array(Utils.oracleVerifyNum).fill(0)
+  }
+  const sellSatoshis = 10000
+  let prevouts = []
+  const tx = new bsv.Transaction()
+
+  const [tokenSell, tokenSellTx] = createTokenSellContract(sellSatoshis)
+  let scriptHash = Buffer.from(bsv.crypto.Hash.sha256ripemd160(tokenSell.lockingScript.toBuffer()))
+  if (args.scriptHash) {
+    scriptHash = args.scriptHash 
+  }
+
+  addInput(tx, tokenSell.lockingScript, 0, prevouts, prevTxId=tokenSellTx.id)
+
+  let tokenInstance = []
+  let tokenScript
+  let tokenInputIndexArray = []
+  let sumInputTokenAmount = 0
+  for (let i = 0; i < nTokenInputs; i++) {
+    const inputTokenAmount = sellSatoshis * 10
+    let address
+    if (Array.isArray(scriptHash)) {
+      address = scriptHash[i]
+    } else {
+      address = scriptHash
+    }
+    const token = createTokenContract(address, inputTokenAmount)
+    tokenInstance.push(token)
+    tokenScript = token.lockingScript
+    addInput(tx, token.lockingScript, i + 1, prevouts)
+    tokenInputIndexArray.push(i + 1)
+    sumInputTokenAmount += inputTokenAmount
+  }
+
+  let outputTokenAddress = []
+  let outputTokenArray = []
+  for (let i = 0; i < nTokenOutputs; i++) {
+    outputTokenAddress.push(address2.hashBuffer)
+    if (i == nTokenOutputs - 1) {
+      if (args.outputTokenAdd !== undefined) {
+        outputTokenArray.push(sumInputTokenAmount + args.outputTokenAdd)
+      } else {
+        outputTokenArray.push(sumInputTokenAmount)
+      }
+    } else {
+      outputTokenArray.push(1)
+      sumInputTokenAmount -= 1
+    }
+  }
+  let tid = tokenID
+  if (args.wrongTokenID) {
+    tid = tokenID2
+  }
+  let tcHash = tokenCodeHash
+  if (args.wrongTokenCodeHash) {
+    tcHash = Buffer.alloc(20, 0)
+  }
+
+  if (args.wrongNSenders) {
+    tokenInputIndexArray.pop()
+  }
+  const [unlockContractCheck, unlockContractCheckTx] = createUnlockContractCheck(tokenInputIndexArray, nTokenOutputs, outputTokenArray, outputTokenAddress, tid=tid, tcHash=tcHash)
+  addInput(tx, unlockContractCheck.lockingScript, 0, prevouts, prevTxId=unlockContractCheckTx.id)
+
+  prevouts = Buffer.concat(prevouts)
+
+  let tokenOutputIndexArray = []
+  for (let i = 0; i < nTokenOutputs; i++) {
+    const tokenScriptBuffer = TokenProto.getNewTokenScript(tokenScript.toBuffer(), outputTokenAddress[i], outputTokenArray[i])
+    addOutput(tx, bsv.Script.fromBuffer(tokenScriptBuffer), inputSatoshis)
+    tokenOutputIndexArray.push(i)
+  }
+
+  // add fake output
+  addOutput(tx, bsv.Script.buildPublicKeyHashOut(address1), sellSatoshis)
+  const tokenScriptBuffer = TokenProto.getNewTokenScript(tokenScript.toBuffer(), outputTokenAddress[0], 199999)
+  addOutput(tx, bsv.Script.fromBuffer(tokenScriptBuffer), inputSatoshis)
+  for (let i = 0; i < nOtherOutputs; i++) {
+    addOutput(tx, bsv.Script.buildPublicKeyHashOut(address1), sellSatoshis)
+  }
+
+
+  Utils.verifyTokenUnlockContractCheck(tx, unlockContractCheck, nTokenInputs + 1, prevouts, tokenInputIndexArray, tokenOutputIndexArray, expected=checkExpected, fake=true)
+
+  if (args.wrongLockContractTx) {
+    tokenSellTx.nLockTime = 1
+  }
+  for (let i = 0; i < nTokenInputs; i++) {
+    const token = tokenInstance[i]
+    if (typeof(tokenExpected) === 'boolean') {
+      verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nTokenOutputs, i + 1, i, nTokenInputs + 1, unlockContractCheckTx, 0, tokenSellTx, OP_UNLOCK_FROM_CONTRACT, tokenExpected)
+    } else {
+      verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nTokenOutputs, i + 1, i, nTokenInputs + 1, unlockContractCheckTx, 0, tokenSellTx, OP_UNLOCK_FROM_CONTRACT, tokenExpected[i])
+    }
+  }
 }
 
 function unlockFromContract(nTokenInputs, nTokenOutputs, nOtherOutputs, args) {
@@ -860,5 +966,13 @@ describe('Test token contract unlock In Javascript', () => {
     }
     unlockFromContract(1, 1, 1, args)
   });
+
+  it('should failed when fake many outputs into one output', () => {
+    args = {
+      tokenExpected: true,
+      checkExpected: false,
+    }
+    unlockFromContractFake(args)
+  }) 
 
 });

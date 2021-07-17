@@ -7,7 +7,36 @@ contract TokenUnlockContractCheck {
 
   static const int MAX_INPUT = 2;
   static const int MAX_OUTPUT = 5;
-    
+
+  function verifyOutput(bytes output, int tokenScriptLen, bytes tokenID): bool {
+    bytes b = output[8:];
+    int n = Util.fromLEUnsigned(b[:1]);
+    int sum = 0;
+    int offset = 0;
+    if (n < 0xfd) {
+      sum = 1 + n;
+      offset = 1;
+    } else if (n == 0xfd) {
+      sum = 3 + Util.fromLEUnsigned(b[1:3]);
+      offset = 3;
+    } else if (n == 0xfe) {
+      sum = 5 + Util.fromLEUnsigned(b[1:5]);
+      offset = 5;
+    } else { // n == 0xff
+      // not support 8 bytes length output
+      //sum = 9 + Util.fromLEUnsigned(b[1:9]);
+      //offset = 9;
+      require(false);
+    }
+    require(len(output) == sum + 8);
+    // check if other output is the same token output
+    bytes script = output[8 + offset:];
+    if (tokenScriptLen == len(script)) {
+      require(TokenProto.getTokenID(script, tokenScriptLen) != tokenID);
+    }
+    return true;
+  }
+
   public function unlock(
     SigHashPreimage txPreimage,
     bytes tokenScript,
@@ -131,13 +160,11 @@ contract TokenUnlockContractCheck {
         } else {
           int outputLen = Util.fromLEUnsigned(otherOutputArray[otherOutputIndex: otherOutputIndex + 4]);
           bytes output = otherOutputArray[otherOutputIndex + 4: otherOutputIndex + 4 + outputLen];
+
+          this.verifyOutput(output, tokenScriptLen, tokenID);
+
           outputs += output;
           otherOutputIndex += 4 + outputLen;
-          // check if other output is the same token output
-          bytes script = TxUtil.getScriptCodeFromOutput(output);
-          if (len(script) == tokenScriptLen) {
-            require(TokenProto.getTokenID(script, tokenScriptLen) != tokenID);
-          }
         }
       }
     }

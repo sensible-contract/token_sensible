@@ -49,11 +49,8 @@ contract Token {
     }
     require(thisOutpoint == prevouts[tokenInputIndex * 36: (tokenInputIndex + 1) * 36]);
 
-    // code hash do not count op_return + data length + data
-    int dataOffset = TxUtil.getVarOpLen(pos) + 1 + pos;
-    // check opreturn
-    bytes code = prevScriptCode[scriptLen - dataOffset: scriptLen - dataOffset + 1]; 
-    require(code == b'6a');
+    // code hash do not count data length + data
+    int dataOffset = TxUtil.getVarOpLen(pos) + pos;
 
     bytes hash = hash160(prevScriptCode[: scriptLen - dataOffset]);
 

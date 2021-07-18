@@ -112,12 +112,12 @@ function createTokenGenesisContract() {
 
 function initContractHash() {
   const transferCheckCode = new TransferCheck()
-  let code = transferCheckCode.lockingScript.toBuffer()
+  let code = Buffer.concat([transferCheckCode.lockingScript.toBuffer(), Buffer.from('6a', 'hex')])
   const transferCheckCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
   transferCheckCodeHashArray = [transferCheckCodeHash, transferCheckCodeHash, transferCheckCodeHash, transferCheckCodeHash, transferCheckCodeHash]
 
   const unlockContract = new UnlockContractCheck()
-  code = unlockContract.lockingScript.toBuffer()
+  code = Buffer.concat([unlockContract.lockingScript.toBuffer(), Buffer.from('6a', 'hex')])
   const unlockContractCodeHash = new Bytes(Buffer.from(bsv.crypto.Hash.sha256ripemd160(code)).toString('hex'))
   unlockContractCodeHashArray = [unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash, unlockContractCodeHash]
 
@@ -133,7 +133,7 @@ function initContractHash() {
   //console.log("genesisHash:", genesisHash)
 
   const tokenContract = new Token(transferCheckCodeHashArray, unlockContractCodeHashArray)
-  code = tokenContract.lockingScript.toBuffer()
+  code = Buffer.concat([tokenContract.lockingScript.toBuffer(), Buffer.from('6a', 'hex')])
   tokenCodeHash = bsv.crypto.Hash.sha256ripemd160(code)
 }
 

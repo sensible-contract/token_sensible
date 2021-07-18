@@ -33,6 +33,7 @@ token.EMPTY_ADDRESS = Buffer.alloc(TOKEN_ADDRESS_LEN, 0)
 
 
 token.PROTO_TYPE = 1
+token.PROTO_VERSION = 1
 token.nonGenesisFlag = Buffer.alloc(1, 0)
 
 token.OP_TRANSFER = 1
@@ -83,7 +84,8 @@ token.getTokenName = function(script) {
 }
 
 token.getContractCode = function(script) {
-  return script.subarray(0, script.length - TOKEN_HEADER_LEN - 3)
+  // exclude 0x76 + len + data
+  return script.subarray(0, script.length - TOKEN_HEADER_LEN - 2)
 }
 
 token.getContractCodeHash = function(script) {

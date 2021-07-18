@@ -97,8 +97,8 @@ library TokenProto {
   }
 
   static function getContractCode(bytes script, int slen): bytes {
-    // opreturn + 0x76 + len + data
-    return script[0: slen - TokenProto.DATA_LEN - 3];
+    // exclude 0x76 + len + data
+    return script[0: slen - TokenProto.DATA_LEN - 2];
   }
 
   static function getContractCodeHash(bytes script, int slen): bytes {

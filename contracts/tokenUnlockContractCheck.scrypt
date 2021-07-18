@@ -91,6 +91,7 @@ contract TokenUnlockContractCheck {
     int paddingPos = 0;
     require(nSenders <= MAX_INPUT);
     // max support loop num input token
+    int prevIndex = -1;
     loop(MAX_INPUT): i {
       if (i < nSenders) {
         // verify rabin signature
@@ -114,7 +115,10 @@ contract TokenUnlockContractCheck {
         require(verifyCount == RabinUtil.ORACLE_VERIFY_NUM);
 
         PayloadU4Data u4 = RabinUtil.loadPayloadU4(rabinMsg);
+        // inputIndex must be not the same
         int inputIndex = Util.fromLEUnsigned(inputTokenIndexArray[i * 4: (i + 1) * 4]);
+        require(prevIndex < inputIndex);
+        prevIndex = inputIndex;
         require(u4.outpoint == prevouts[inputIndex * 36: (inputIndex + 1) * 36]);
 
         bytes address = inputTokenAddressArray[i * 20: (i + 1) * 20];

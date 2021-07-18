@@ -124,7 +124,7 @@ contract Token {
     RabinUtil.verifyTokenMsg(rabinPubKeyVerifyArray, rabinMsg, rabinPaddingArray, rabinSigArray, thisOutpoint, sensibleID, tokenScript, genesisHash, prevTokenAddress, prevTokenAmount);
 
     bytes tokenID = TokenProto.getTokenID(tokenScript, scriptLen);
-    bool res2 = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, tokenID, tokenCodeHash, nReceivers, thisOutpoint, tokenInputIndex, operation);
-    require(res2 == true);
+    bool res = this.verifyAmountCheckContract(hashArray, prevouts, checkInputIndex, checkScriptTx, tokenID, tokenCodeHash, nReceivers, thisOutpoint, tokenInputIndex, operation);
+    require(res == true);
   }
 }

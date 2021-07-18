@@ -1,0 +1,29 @@
+import "util.scrypt";
+
+library ProtoHeader {
+
+  // <proto header> = <proto_version(4 bytes)> + <proto_type(4 bytes)> + <'sesible'(8 bytes)>
+  static const bytes PROTO_FLAG = b'73656e7369626c65';
+  static const int PROTO_TYPE = 1;
+
+  static const int PROTO_VERSION_LEN = 4;
+  static const int PROTO_TYPE_LEN = 4;
+  static const int PROTO_FLAG_LEN = 8;
+
+  static const int TYPE_OFFSET = 12;
+  static const int VERSION_OFFSET = 16;
+
+  static const int HEADER_LEN = VERSION_OFFSET;
+
+  static function getProtoFlag(bytes script, int slen): bytes {
+    return script[slen - PROTO_FLAG_LEN: slen];
+  }
+
+  static function getProtoType(bytes script, int slen): int {
+    return Util.fromLEUnsigned(script[slen - TYPE_OFFSET: slen - TYPE_OFFSET + PROTO_TYPE_LEN]);
+  }
+
+  static function getProtoVersion(bytes script, int slen): int {
+      return Util.fromLEUnsigned(script[slen - VERSION_OFFSET: slen - VERSION_OFFSET + PROTO_VERSION_LEN]);
+  }
+}

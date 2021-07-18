@@ -50,7 +50,8 @@ const tokenSymbol = Buffer.alloc(10, 0)
 tokenSymbol.write('ttn')
 const genesisFlag = TokenUtil.getUInt8Buf(1)
 const nonGenesisFlag = TokenUtil.getUInt8Buf(0)
-const tokenType = TokenUtil.getUInt32Buf(1)
+const tokenVersion = TokenUtil.getUInt32Buf(TokenProto.PROTO_VERSION)
+const tokenType = TokenUtil.getUInt32Buf(TokenProto.PROTO_TYPE)
 const PROTO_FLAG = Proto.PROTO_FLAG
 
 const address1 = privateKey.toAddress()
@@ -101,6 +102,7 @@ function createTokenGenesisContract() {
     Buffer.alloc(20, 0), // genesisHash
     Common.rabinPubKeyHashArrayHash,
     sensibleID,
+    tokenVersion,
     tokenType,
     PROTO_FLAG
   ])
@@ -147,6 +149,7 @@ function createTokenContract(addressBuf, amount) {
     genesisHash,
     Common.rabinPubKeyHashArrayHash,
     Buffer.from(sensibleID, 'hex'),
+    tokenVersion,
     tokenType,
     PROTO_FLAG
   ])

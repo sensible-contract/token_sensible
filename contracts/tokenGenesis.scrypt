@@ -1,6 +1,7 @@
 import "util.scrypt";
 import "tokenProto.scrypt";
 import "rabinUtil.scrypt";
+import "protoheader.scrypt";
 
 contract TokenGenesis {
   PubKey pubKey;
@@ -46,9 +47,11 @@ contract TokenGenesis {
       isFirst = true;
       sensibleID = Util.outpoint(txPreimage);
     } 
-    int protoType = TokenProto.getProtoType(genesisScript, dataLen);
+    int protoVersion = ProtoHeader.getProtoVersion(genesisScript, dataLen);
+    require(TokenProto.PROTO_VERSION == protoVersion);
+    int protoType = ProtoHeader.getProtoType(genesisScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
-    bytes flag = TokenProto.getProtoFlag(genesisScript, dataLen);
+    bytes flag = ProtoHeader.getProtoFlag(genesisScript, dataLen);
     require(flag == TokenProto.PROTO_FLAG);
     // check opreturn
     require(TokenProto.checkDataLen(genesisScript, dataLen));
@@ -79,9 +82,10 @@ contract TokenGenesis {
     require(0 == TokenProto.getGenesisFlag(tokenScript, dataLen));
     require(decimalNum == TokenProto.getDecimalNum(tokenScript, dataLen));
     require(sensibleID == TokenProto.getSensibleID(tokenScript, dataLen));
-    protoType = TokenProto.getProtoType(tokenScript, dataLen);
+    require(ProtoHeader.getProtoVersion(tokenScript, dataLen) == TokenProto.PROTO_VERSION);
+    protoType = ProtoHeader.getProtoType(tokenScript, dataLen);
     require(protoType == TokenProto.PROTO_TYPE);
-    require(TokenProto.PROTO_FLAG == TokenProto.getProtoFlag(tokenScript, dataLen));
+    require(TokenProto.PROTO_FLAG == ProtoHeader.getProtoFlag(tokenScript, dataLen));
     require(rabinPubKeyHashArrayHash == TokenProto.getRabinPubKeyHashArrayHash(tokenScript, dataLen));
     require(genesisHash == TokenProto.getGenesisHash(tokenScript, dataLen));
     // check opreturn

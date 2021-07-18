@@ -39,7 +39,7 @@ const genContract = Utils.genContract
 
 let Token, Genesis, TransferCheck, UnlockContractCheck
 function initContract() {
-  const use_desc = true
+  const use_desc = false
   const use_release = true
   Genesis = genContract('tokenGenesis', use_desc, use_release)
   Token = genContract('token', use_desc, use_release)
@@ -55,8 +55,8 @@ tokenSymbol.write('ttn')
 const issuerPubKey = privateKey.publicKey
 const genesisFlag = Buffer.from('01', 'hex')
 const nonGenesisFlag = Buffer.from('00', 'hex')
-const tokenType = Buffer.alloc(4, 0)
-tokenType.writeUInt32LE(1)
+const tokenVersion = Common.getUInt32Buf(1)
+const tokenType = Common.getUInt32Buf(1)
 const PROTO_FLAG = Proto.PROTO_FLAG
 const address1 = privateKey.toAddress()
 const tokenValue = 1000000
@@ -143,6 +143,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       Buffer.alloc(20, 0), // genesisHash
       rabinPubKeyHashArrayHash,
       Buffer.alloc(36, 0), // sensibleID
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -175,6 +176,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID,
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -228,6 +230,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       Buffer.alloc(20, 0), // genesisHash
       rabinPubKeyHashArrayHash,
       sensibleID,
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -262,6 +265,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -277,6 +281,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -294,6 +299,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -311,6 +317,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -327,6 +334,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -344,6 +352,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -361,6 +370,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       Buffer.alloc(sensibleID.length, 0), // script code hash
+      tokenVersion,
       tokenType, // type
       PROTO_FLAG
     ])
@@ -377,6 +387,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       Buffer.alloc(tokenType.length, 0), // type
       PROTO_FLAG
     ])
@@ -393,6 +404,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       Buffer.alloc(PROTO_FLAG.length, 0)
     ])
@@ -409,6 +421,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       Buffer.alloc(PROTO_FLAG.length, 0)
     ])
@@ -425,6 +438,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       Buffer.alloc(20, 0),
       rabinPubKeyHashArrayHash,
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       Buffer.alloc(PROTO_FLAG.length, 0)
     ])
@@ -441,6 +455,7 @@ describe('Test genesis contract unlock In Javascript', () => {
       genesisHash,
       Buffer.alloc(20, 0),
       sensibleID, // script code hash
+      tokenVersion,
       tokenType, // type
       Buffer.alloc(PROTO_FLAG.length, 0)
     ])

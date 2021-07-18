@@ -102,6 +102,7 @@ contract TokenTransferCheck {
       if (i < nReceivers) {
         bytes address = receiverArray[i * TokenProto.TOKEN_ADDRESS_LEN: (i + 1) * TokenProto.TOKEN_ADDRESS_LEN];
         int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[i * TokenProto.TOKEN_AMOUNT_LEN: (i + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
+        require(tokenAmount > 0);
         sumOutputToken = sumOutputToken + tokenAmount;
         bytes outputScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, tokenAmount);
         int outputSatoshi = Util.fromLEUnsigned(receiverSatoshiArray[i * 8: (i + 1) * 8]);

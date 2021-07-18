@@ -152,6 +152,7 @@ contract TokenUnlockContractCheck {
         if (i == tokenOutIndex) {
           bytes address = receiverArray[tokenIndex * TokenProto.TOKEN_ADDRESS_LEN: (tokenIndex + 1) * TokenProto.TOKEN_ADDRESS_LEN];
           int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[tokenIndex * TokenProto.TOKEN_AMOUNT_LEN: (tokenIndex + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
+          require(tokenAmount > 0);
           sumOutputToken += tokenAmount;
           bytes outputScript = TokenProto.getNewTokenScript(tokenScript, tokenScriptLen, address, tokenAmount);
           int outputSatoshi = Util.fromLEUnsigned(tokenOutputSatoshiArray[tokenIndex * 8: (tokenIndex + 1) * 8]);

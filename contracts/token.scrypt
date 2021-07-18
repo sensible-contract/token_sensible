@@ -51,6 +51,9 @@ contract Token {
 
     // code hash do not count op_return + data length + data
     int dataOffset = TxUtil.getVarOpLen(pos) + 1 + pos;
+    // check opreturn
+    bytes code = prevScriptCode[scriptLen - dataOffset: scriptLen - dataOffset + 1]; 
+    require(code == b'6a');
 
     bytes hash = hash160(prevScriptCode[: scriptLen - dataOffset]);
 

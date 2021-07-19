@@ -102,7 +102,7 @@ library RabinUtil {
     return true;
   }
 
-  static function verifyTokenMsg(int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyArray, bytes rabinMsg, bytes[RabinUtil.ORACLE_VERIFY_NUM] paddingArray, int[RabinUtil.ORACLE_VERIFY_NUM] sigArray, bytes thisOutpoint, bytes tokenID, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
+  static function verifyTokenMsg(int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyArray, bytes rabinMsg, bytes[RabinUtil.ORACLE_VERIFY_NUM] paddingArray, int[RabinUtil.ORACLE_VERIFY_NUM] sigArray, bytes thisOutpoint, bytes sensibleID, bytes script, bytes genesisHash, bytes tokenAddress, int tokenAmount): bool {
     RabinUtil.verifyRabinMsg(rabinPubKeyArray, rabinMsg, paddingArray, sigArray);
 
     PayloadU4SpendByData pl = RabinUtil.loadPayloadU4SpendBy(rabinMsg);
@@ -111,7 +111,7 @@ library RabinUtil {
 
     bool matchGenesis = false;
 
-    if (pl.outpoint == tokenID) {
+    if (pl.outpoint == sensibleID) {
       matchGenesis = true;
     } else {
       if (pl.scriptHash == genesisHash) {
@@ -133,7 +133,6 @@ library RabinUtil {
     bytes rabinMsg,
     bytes[RabinUtil.ORACLE_VERIFY_NUM] rabinPaddingArray, 
     int[RabinUtil.ORACLE_VERIFY_NUM] rabinSigArray,
-    int[RabinUtil.ORACLE_VERIFY_NUM] rabinPubKeyIndexArray,
     bytes prevouts,
     int inputIndex,
     bytes inputScript

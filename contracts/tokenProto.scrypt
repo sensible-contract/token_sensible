@@ -8,6 +8,7 @@ library TokenProto {
   static const int OP_UNLOCK_FROM_CONTRACT = 2;
 
   static const bytes BURN_ADDRESS = b'0000000000000000000000000000000000000000';
+  static const bytes NULL_SENSIBLE_ID = b'000000000000000000000000000000000000000000000000000000000000000000000000';
 
   // flag is sensible
   static const bytes PROTO_FLAG = ProtoHeader.PROTO_FLAG;

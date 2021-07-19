@@ -92,6 +92,16 @@ library TxUtil {
       return res;
   }
 
+  static function getVarOpLenOpt(int length): int {
+    int res = 0;
+    if (length <= 75) {
+        res = 1;
+    } else {
+        res = 2;
+    } 
+    return res;
+  }
+
   static function genBsvOutput(int satoshis, Ripemd160 address): bytes {
     bytes output = b'';
     if (satoshis > 0) {

@@ -146,10 +146,12 @@ contract TokenUnlockContractCheck {
     if (nReceivers > 0) {
       tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[0: 4]);
     }
+    int prevTokenOutIndex = -1;
     require(nOutputs <= MAX_OUTPUT);
     loop(MAX_OUTPUT): i {
       if (i < nOutputs) {
         if (i == tokenOutIndex) {
+          require(prevTokenOutIndex < tokenOutIndex);
           bytes address = receiverArray[tokenIndex * TokenProto.TOKEN_ADDRESS_LEN: (tokenIndex + 1) * TokenProto.TOKEN_ADDRESS_LEN];
           int tokenAmount = Util.fromLEUnsigned(receiverTokenAmountArray[tokenIndex * TokenProto.TOKEN_AMOUNT_LEN: (tokenIndex + 1) * TokenProto.TOKEN_AMOUNT_LEN]);
           require(tokenAmount > 0);
@@ -160,6 +162,7 @@ contract TokenUnlockContractCheck {
           outputs += output;
           tokenIndex += 1;
           if (tokenIndex < nReceivers) {
+            prevTokenOutIndex = tokenOutIndex;
             tokenOutIndex = Util.fromLEUnsigned(tokenOutputIndexArray[tokenIndex * 4: (tokenIndex + 1) * 4]);
           }
         } else {

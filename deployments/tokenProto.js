@@ -34,6 +34,9 @@ token.EMPTY_ADDRESS = Buffer.alloc(TOKEN_ADDRESS_LEN, 0)
 
 token.PROTO_TYPE = 1
 token.PROTO_VERSION = 1
+token.nonGenesisFlag = Buffer.from('00', 'hex')
+token.genesisFlag = Buffer.from('01', 'hex')
+token.BURN_ADDRESS = Buffer.alloc(20, 0)
 token.nonGenesisFlag = Buffer.alloc(1, 0)
 
 token.OP_TRANSFER = 1
@@ -60,7 +63,7 @@ token.getRabinPubKeyHashArrayHash = function(script) {
 }
 
 token.getGenesisHash = function(script) {
-  return script.subarray(script.length - GENESIS_FLAG_OFFSET, script.length - GENESIS_FLAG_OFFSET + GENESIS_FLAG_LEN)
+  return script.subarray(script.length - GENESIS_HASH_OFFSET, script.length - GENESIS_HASH_OFFSET + GENESIS_HASH_LEN)
 }
 
 token.getTokenAddress = function(script) {

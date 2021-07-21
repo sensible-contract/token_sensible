@@ -664,10 +664,11 @@ function unlockFromContract(nTokenInputs, nTokenOutputs, nOtherOutputs, args) {
   }
   for (let i = 0; i < nTokenInputs; i++) {
     const token = tokenInstance[i]
+    let op = args.op || OP_UNLOCK_FROM_CONTRACT
     if (typeof(tokenExpected) === 'boolean') {
-      verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nTokenOutputs, i + 1, i, nTokenInputs + 1, unlockContractCheckTx, 0, tokenSellTx, OP_UNLOCK_FROM_CONTRACT, tokenExpected)
+      verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nTokenOutputs, i + 1, i, nTokenInputs + 1, unlockContractCheckTx, 0, tokenSellTx, op, tokenExpected)
     } else {
-      verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nTokenOutputs, i + 1, i, nTokenInputs + 1, unlockContractCheckTx, 0, tokenSellTx, OP_UNLOCK_FROM_CONTRACT, tokenExpected[i])
+      verifyOneTokenContract(tx, rabinPubKeyIndexArray, prevouts, token, nTokenOutputs, i + 1, i, nTokenInputs + 1, unlockContractCheckTx, 0, tokenSellTx, op, tokenExpected[i])
     }
   }
 }
@@ -966,6 +967,15 @@ describe('Test token contract unlock In Javascript', () => {
       tokenExpected: true,
       checkExpected: false,
       outputTokenAdd: 100,
+    }
+    unlockFromContract(1, 1, 1, args)
+  });
+
+  it('it should failed when pass wrong op to token', () => {
+    const args = {
+      tokenExpected: false,
+      checkExpected: true,
+      op: 3,
     }
     unlockFromContract(1, 1, 1, args)
   });

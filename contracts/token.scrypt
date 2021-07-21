@@ -96,7 +96,7 @@ contract Token {
       // authorize
       require(hash160(senderPubKey) == senderAddress);
       require(checkSig(senderSig, senderPubKey));
-    } else {
+    } else if (operation == TokenProto.OP_UNLOCK_FROM_CONTRACT) {
       require(nReceivers >= 0);
       hashArray = this.unlockContractCodeHashArray;
 
@@ -113,6 +113,9 @@ contract Token {
 
         require(hash160(prevScriptCode) == contractHash);
       }
+    } else {
+      // do not remove
+      require(false);
     }
 
     // verify rabin signature

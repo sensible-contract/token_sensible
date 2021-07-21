@@ -19,8 +19,6 @@ library RabinUtil {
 
   static const int ORACLE_NUM = 5;
   static const int ORACLE_VERIFY_NUM = 3;
-  //static const int ORACLE_VERIFY_NUM2 = ORACLE_VERIFY_NUM - 1;
-  static const int ORACLE_VERIFY_NUM2 = 2;
   static const int RABIN_HASH_TIMES = 11;
 
   // u4 rabin msg common format:
@@ -90,15 +88,14 @@ library RabinUtil {
 
     require(hash160(rabinPubKeyHashArray) == rabinPubKeyHashArrayHash);
 
-    loop(RabinUtil.ORACLE_VERIFY_NUM2): i {
-        require(rabinPubKeyIndexArray[i + 1] > rabinPubKeyIndexArray[i]);
-        bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[i], RABIN_PUBKEY_LEN);
+    int preIdx = -1;
+    loop(RabinUtil.ORACLE_VERIFY_NUM): i {
         int idx = rabinPubKeyIndexArray[i];
+        require(idx > preIdx);
+        preIdx = idx;
+        bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[i], RABIN_PUBKEY_LEN);   
         require(rabinPubKeyHashArray[idx * 20: (idx + 1) * 20] == hash160(rabinBytes));
     }
-    int index = rabinPubKeyIndexArray[RabinUtil.ORACLE_VERIFY_NUM - 1];
-    bytes rabinBytes = Util.toLEUnsigned(rabinPubKeyArray[RabinUtil.ORACLE_VERIFY_NUM - 1], RABIN_PUBKEY_LEN);
-    require(rabinPubKeyHashArray[index * 20: (index + 1) * 20] == hash160(rabinBytes));
     return true;
   }
 

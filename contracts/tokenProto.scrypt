@@ -14,6 +14,7 @@ library TokenProto {
   static const bytes PROTO_FLAG = ProtoHeader.PROTO_FLAG;
   static const int PROTO_TYPE = 1;
   static const int PROTO_VERSION = 1;
+  //static const bytes TOKEN_PROTO_HEADER = b'0100000001000000';
   // <type specific data> + <proto header>
   // <proto header> = <type(4 bytes)> + <'sensible'(8 bytes)>
   //<token type specific data> = <token_name (20 bytes)> + <token_symbol (10 bytes)> + <is_genesis(1 byte)> + <decimailNum(1 byte)> + <address(20 bytes)> + <token amount(8 bytes)> + <genesisHash(20 bytes)> + <rabinPubKeyHashArrayHash(20 bytes)> + <tokenid(20 bytes)>
@@ -61,6 +62,10 @@ library TokenProto {
     return script[0: slen - TokenProto.TOKEN_ADDRESS_OFFSET] + address +  Util.toLEUnsigned(tokenValue, 8) + script[slen - TokenProto.GENESIS_HASH_OFFSET: slen];
   }
 
+  static function getNewTokenScriptFromGenesisData(bytes script, int slen, bytes address, int tokenAmount, bytes lpGenesisHash): bytes {
+    return script[0: slen - TokenProto.GENESIS_FLAG_OFFSET] + b'00' + script[slen - DECIMAL_NUM_OFFSET: slen - TokenProto.TOKEN_ADDRESS_OFFSET]+ address +  Util.toLEUnsigned(tokenAmount, 8) + lpGenesisHash + script[slen - TokenProto.RABIN_PUBKEY_HASH_ARRAY_HASH_OFFSET: ];
+  }
+
   static function getGenesisHash(bytes script, int slen): bytes {
     return script[slen - GENESIS_HASH_OFFSET: slen - GENESIS_HASH_OFFSET + GENESIS_HASH_LEN];
   }
@@ -89,6 +94,10 @@ library TokenProto {
     return script[slen - TokenProto.TOKEN_NAME_OFFSET: slen - TokenProto.TOKEN_NAME_OFFSET + TokenProto.TOKEN_NAME_LEN];
   }
 
+  static function getTokenNameAndSymbol(bytes script, int slen): bytes {
+    return script[slen - TokenProto.TOKEN_NAME_OFFSET: slen - TokenProto.TOKEN_SYMBOL_OFFSET + TokenProto.TOKEN_SYMBOL_LEN];
+  }
+
   static function checkDataLen(bytes script, int slen): bool {
     return unpack(script[slen - TokenProto.DATA_LEN - 1: slen - TokenProto.DATA_LEN] + b'00') == TokenProto.DATA_LEN;
   }
@@ -102,11 +111,21 @@ library TokenProto {
     return script[0: slen - TokenProto.DATA_LEN - 2];
   }
 
+  static function getDataPart(bytes script, int slen): bytes {
+    // exclude 0x76 + len + data
+    return script[slen - TokenProto.DATA_LEN - 2: ];
+  }
+
   static function getContractCodeHash(bytes script, int slen): bytes {
     return hash160(TokenProto.getContractCode(script, slen));
   }
 
   static function getNewGenesisScript(bytes script, int slen, bytes sensibleID): bytes {
     return script[: slen - TokenProto.SENSIBLE_ID_OFFSET] + sensibleID + script[slen - ProtoHeader.HEADER_LEN: ];
+  }
+
+  static function checkProtoHeader(bytes script, int slen): bool {
+    //return script[slen - ProtoHeader.HEADER_LEN:] == Util.toLEUnsigned(PROTO_VERSION, ProtoHeader.PROTO_VERSION_LEN) + Util.toLEUnsigned(PROTO_TYPE, ProtoHeader.PROTO_TYPE_LEN) + ProtoHeader.PROTO_FLAG;
+    return script[slen - ProtoHeader.HEADER_LEN:] == b'0100000001000000' + ProtoHeader.PROTO_FLAG;
   }
 }
